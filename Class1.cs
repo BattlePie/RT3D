@@ -17,6 +17,7 @@ namespace Simple3D
     }
     public class Vector
     {
+
         public Point3D start;
         public Point3D end;
         public Point3D relative_end;
