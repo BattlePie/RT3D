@@ -8,11 +8,11 @@ namespace Simple3D
         public float x;
         public float y;
         public float z;
-        public Point3D(float x_input, float y_input, float z_input)
+        public Point3D(float x, float y, float z)
         {
-            x = x_input;
-            y = y_input;
-            z = z_input;
+            this.x = x;
+            this.y = y;
+            this.z = z;
         }
     }
     public class Vector
@@ -21,10 +21,10 @@ namespace Simple3D
         public Point3D start;
         public Point3D end;
         public Point3D relative_end;
-        public Vector(Point3D input_starting_point, Point3D input_end)
+        public Vector(Point3D start, Point3D end)
         {
-            start = input_starting_point;
-            end = input_end;
+            this.start = start;
+            this.end = end;
             relative_end = new Point3D(end.x - start.x, end.y - start.y, end.z - start.z);
         }
         public static float Length(Vector input_vector)
@@ -77,6 +77,15 @@ namespace Simple3D
             relative_end.y /= len;
             relative_end.z /= len;
         }
+        public Vector Normalize(Vector A)
+        {
+            float len = Length(A);
+            return new Vector(new Point3D(0, 0, 0), 
+                new Point3D(relative_end.x /= len,
+                            relative_end.y /= len,
+                            relative_end.z /= len));
+        }
+
         public Point3D FindVectorToPolygonIntersectionPoint(Polygon poly)
         {
             float t = FindT(poly);
@@ -86,7 +95,7 @@ namespace Simple3D
                 float z = end.z * t;
             return new Point3D(x, y, z);
         }
-        public float FindT(Polygon poly) // Через нормальный вектор и точку
+        public float FindT(Polygon poly)
         {
             float div = poly.A * start.x + poly.B * start.y + poly.C * start.z - poly.A * end.x - poly.B * end.y - poly.C * end.z;
             float t;
@@ -97,6 +106,18 @@ namespace Simple3D
 
             if (t > 0)
                 return t;
+            else
+                return -1;
+        }
+        public float FindT(Sphere sph)
+        {
+            Polygon poly = new Polygon(Normalize(new Vector(relative_end, new Point3D(0, 0, 0))));
+            Point3D intersection_point = FindVectorToPolygonIntersectionPoint(poly);
+            Vector center_to_IP = new Vector(sph.center, intersection_point);
+            Vector res_ray = new Vector(start, intersection_point);
+
+            if (Length(center_to_IP) <= sph.radius)
+                return Length(res_ray) / Length(this);
             else
                 return -1;
         }
@@ -128,14 +149,19 @@ namespace Simple3D
         public float B;
         public float C;
         public float D;
-        public Color color;
-        public Polygon(Point3D input_vertex1, Point3D input_vertex2, Point3D input_vertex3, Color input_color)
+        public Polygon(Point3D vertex1, Point3D vertex2, Point3D vertex3)
         {
-            vertex1 = input_vertex1;
-            vertex2 = input_vertex2;
-            vertex3 = input_vertex3;
-            color = input_color;
+            this.vertex1 = vertex1;
+            this.vertex2 = vertex2;
+            this.vertex3 = vertex3;
             FindABCD();
+        }
+        public Polygon(Vector normal)
+        {
+            A = normal.relative_end.x;
+            B = normal.relative_end.y;
+            C = normal.relative_end.z;
+            D = -A - B - C;
         }
 
         void FindABCD()
@@ -149,5 +175,15 @@ namespace Simple3D
             D = (-vertex1.x * A) + (-vertex1.y * B) + (-vertex1.z * C);
         }
 
+    }
+    public class Sphere
+    {
+        public Point3D center;
+        public float radius;
+        public Sphere(Point3D center, float radius)
+        {
+            this.center = center;
+            this.radius = radius;
+        }
     }
 }

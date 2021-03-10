@@ -35,8 +35,8 @@ namespace RTX3d_test
             screen_height = ClientRectangle.Height;
             n_rays_x = screen_width;
             n_rays_y = screen_height;
-            bounces = 5;
-            far = 200; // Дальность farplane
+            bounces = 3;
+            far = 170; // Дальность farplane
             FOV_x = screen_width; // Ширина farplane
             FOV_y = screen_height;
             cam = new Point3D(10, 0, 100);
@@ -48,7 +48,7 @@ namespace RTX3d_test
             int floor = -10;
             int ceiling = 200;
 
-            m_light = new Omnilight(new Point3D(50, 0, ceiling / 2), 200, Color.Orange, 200);
+            m_light = new Omnilight(new Point3D(105, 0, ceiling / 2), 200, Color.White, 200);
 
             // Окружение
             {
@@ -77,18 +77,16 @@ namespace RTX3d_test
                 m_walls.Add(new Surface(new Point3D(0, 200, ceiling), new Point3D(200, -200, ceiling), new Point3D(0, -200, ceiling), Color.FromArgb(255, 50, 50, 50), 0.6f, 50));
             }
 
-            MakeCube(new Point3D(10, 30, 40), new Point3D(100, 50, floor), 0f, Color.DarkGreen);
-            MakeCube(new Point3D(20, 40, 10), new Point3D(100, -100, 30), 0f, Color.DarkRed);
+            MakeCube(new Point3D(10, 30, 40), new Point3D(140, 20, floor), 0f, Color.DarkRed);
+            MakeCube(new Point3D(10, 30, 40), new Point3D(70, -50, floor), 0f, Color.DarkRed);
+            MakeCube(new Point3D(10, 30, 40), new Point3D(140, -50, floor), 0f, Color.DarkGreen);
+            MakeCube(new Point3D(10, 30, 40), new Point3D(70, 20, floor), 0f, Color.DarkGreen);
+            //MakeCube(new Point3D(20, 40, 10), new Point3D(100, -100, 30), 0f, Color.DarkRed);
             
 
             SetRays(m_rays);
             FillT(m_rays);
         }
-        public float RadToDegree(float angle)
-        {
-            return (float)(angle * Math.PI / 180);
-        }
-
         public class Ray3D : Vector
         {
             public float t = 1000;
@@ -151,12 +149,14 @@ namespace RTX3d_test
         {
             public float reflectivity;
             public float reflection_distance;
+            public Color color;
 
             public Surface(Point3D vertex1, Point3D vertex2, Point3D vertex3, Color color, float reflec = 0f,float ref_dist = 300f)
-                :base( vertex1,  vertex2,  vertex3, color)
+                :base( vertex1,  vertex2,  vertex3)
             {
                 reflectivity = reflec;
                 reflection_distance = ref_dist;
+                this.color = color;
             }
         }
         public class Lightray : Vector
@@ -168,18 +168,19 @@ namespace RTX3d_test
 
             }
         }
+
         public struct Omnilight
         {
             public Point3D pos;
             public float power;
             public float fallof_distance;
             public Color color;
-            public Omnilight(Point3D input_pos, int input_power, Color input_color, float input_fallof_distance)
+            public Omnilight(Point3D pos, int power, Color color, float fallof_distance)
             {
-                pos = input_pos;
-                power = input_power;
-                color = input_color;
-                fallof_distance = input_fallof_distance;
+                this.pos = pos;
+                this.power = power;
+                this.color = color;
+                this.fallof_distance = fallof_distance;
             }
         }
 
@@ -321,11 +322,6 @@ namespace RTX3d_test
            /* 000 100 101 */ m_walls.Add(new Surface(new Point3D(offset.x, offset.y, offset.z), new Point3D(offset.x + size.x, offset.y, offset.z), new Point3D(offset.x + size.x, offset.y, offset.z + size.z), color, reflectivity));
            /* 011 111 010 */ m_walls.Add(new Surface(new Point3D(offset.x, offset.y + size.y, offset.z + size.z), new Point3D(offset.x + size.x, offset.y + size.y, offset.z + size.z), new Point3D(offset.x, offset.y + size.y, offset.z), color, reflectivity));
            /* 010 111 110 */ m_walls.Add(new Surface(new Point3D(offset.x, offset.y + size.y, offset.z), new Point3D(offset.x + size.x, offset.y + size.y, offset.z + size.z), new Point3D(offset.x + size.x, offset.y + size.y, offset.z), color, reflectivity));
-        }
-        public void MakeTetrahedron(Point3D size, Point3D offset, float reflectivity, Color color)
-        {
-            /* 000 101 110*/m_walls.Add(new Surface(new Point3D(offset.x, offset.y, offset.z), new Point3D(offset.x + size.x, offset.y ,offset.z + size.z), new Point3D(offset.x + size.x,offset.y + size.y ,offset.z), color));
-                            m_walls.Add(new Surface(new Point3D(offset.x, offset.y, offset.z), new Point3D(offset.x + size.x, offset.y + size.y, offset.z), new Point3D(offset.x + size.x, offset.y, offset.z - size.z), color));
         }
         private void Form1_MouseDown(object sender, MouseEventArgs e)
         {

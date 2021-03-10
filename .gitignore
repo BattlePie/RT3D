@@ -3,3 +3,20 @@
 ################################################################################
 
 /obj
+bin/Release/RTX3d_test.exe
+bin/Release/RTX3d_test.exe.config
+bin/Release/RTX3d_test.pdb
+obj/Release/.NETFramework,Version=v4.7.2.AssemblyAttributes.cs
+obj/Release/DesignTimeResolveAssemblyReferencesInput.cache
+obj/Release/RTX3d_test.csproj.CoreCompileInputs.cache
+obj/Release/RTX3d_test.csproj.FileListAbsolute.txt
+obj/Release/RTX3d_test.csproj.GenerateResource.cache
+obj/Release/RTX3d_test.csprojAssemblyReference.cache
+obj/Release/RTX3d_test.exe
+obj/Release/RTX3d_test.Form1.resources
+obj/Release/RTX3d_test.pdb
+obj/Release/RTX3d_test.Properties.Resources.resources
+bin/Release/RTX3d_test.exe
+bin/Release/RTX3d_test.exe.config
+bin/Release/RTX3d_test.pdb
+RTX3d_test.csproj.user
