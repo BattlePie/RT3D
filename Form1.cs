@@ -82,7 +82,7 @@ namespace RTX3d_test
             MakeCube(new Point3D(10, 30, 40), new Point3D(140, -50, floor), 0f, Color.DarkGreen);
             MakeCube(new Point3D(10, 30, 40), new Point3D(70, 20, floor), 0f, Color.DarkGreen);
             //MakeCube(new Point3D(20, 40, 10), new Point3D(100, -100, 30), 0f, Color.DarkRed);
-            
+
 
             SetRays(m_rays);
             FillT(m_rays);
@@ -95,10 +95,10 @@ namespace RTX3d_test
             public Lightray light;
             public Ray3D reflected_ray;
             public float bounce;
-            public Ray3D(Point3D input_starting_point, Point3D input_end) 
+            public Ray3D(Point3D input_starting_point, Point3D input_end)
                 : base(input_starting_point, input_end)
             {
-               
+
             }
 
             public Color CalculateColor()
@@ -109,34 +109,34 @@ namespace RTX3d_test
                 if (reflected_ray != null && reflected_ray.hit_wall != null)
                 {
                     col = reflected_ray.CalculateColor();
-                    reflection_distance = Math.Max(0, hit_wall.reflection_distance - Length(new Vector(reflected_ray.start, reflected_ray.hit_point))) / hit_wall.reflection_distance;
+                    reflection_distance = Math.Max(0, hit_wall.parameters.reflection_distance - Length(new Vector(reflected_ray.start, reflected_ray.hit_point))) / hit_wall.parameters.reflection_distance;
                 }
                 Color c = Color.Black;
 
-                if(light != null)
+                if (light != null)
                 {
                     float light_length = Length(light);
                     float fallof_power = (light.light.power - light_length) / light.light.power;
                     float light_power = Math.Max(0, fallof_power);//fallof_power > 0 ? 1 / fallof_power : 1 ;
 
-                    c = Color.FromArgb(Math.Min(255, (int)(light_power * light.light.color.A) + hit_wall.color.A),
-                        Math.Min(255, (int)(light_power * light.light.color.R) + hit_wall.color.R),
-                        Math.Min(255, (int)(light_power * light.light.color.G) + hit_wall.color.G),
-                        Math.Min(255, (int)(light_power * light.light.color.B) + hit_wall.color.B));
+                    c = Color.FromArgb(Math.Min(255, (int)(light_power * light.light.color.A) + hit_wall.parameters.color.A),
+                        Math.Min(255, (int)(light_power * light.light.color.R) + hit_wall.parameters.color.R),
+                        Math.Min(255, (int)(light_power * light.light.color.G) + hit_wall.parameters.color.G),
+                        Math.Min(255, (int)(light_power * light.light.color.B) + hit_wall.parameters.color.B));
                 }
-                return Color.FromArgb(Math.Min(255, (int)(c.A + col.A * hit_wall.reflectivity * reflection_distance)),
-                                      Math.Min(255, (int)(c.R + col.R * hit_wall.reflectivity * reflection_distance)),
-                                      Math.Min(255, (int)(c.G + col.G * hit_wall.reflectivity * reflection_distance)),
-                                      Math.Min(255, (int)(c.B + col.B * hit_wall.reflectivity * reflection_distance)));
+                return Color.FromArgb(Math.Min(255, (int)(c.A + col.A * hit_wall.parameters.reflectivity * reflection_distance)),
+                                      Math.Min(255, (int)(c.R + col.R * hit_wall.parameters.reflectivity * reflection_distance)),
+                                      Math.Min(255, (int)(c.G + col.G * hit_wall.parameters.reflectivity * reflection_distance)),
+                                      Math.Min(255, (int)(c.B + col.B * hit_wall.parameters.reflectivity * reflection_distance)));
             }
             public void CalcReflection()
             {
                 Point3D zero = new Point3D(0, 0, 0);
-                Vector n = new Vector(zero, new Point3D(hit_wall.A, hit_wall.B, hit_wall.C));
+                Vector n = new Vector(zero, new Point3D(hit_wall.polygon.A, hit_wall.polygon.B, hit_wall.polygon.C));
                 n.Normalize();
                 float sm = ScolarMult(this, n);
                 Vector denum = new Vector(zero, new Point3D(n.relative_end.x * 2 * sm,
-                                                            n.relative_end.y * 2 * sm, 
+                                                            n.relative_end.y * 2 * sm,
                                                             n.relative_end.z * 2 * sm));
 
                 reflected_ray = new Ray3D(hit_point,
@@ -145,20 +145,38 @@ namespace RTX3d_test
                     relative_end.z - denum.relative_end.z + hit_point.z));
             }
         }
-        public class Surface : Polygon
+        public class Surface
+        {
+            public SurfaceParam parameters;
+            public Polygon polygon;
+            public Surface(Point3D vertex1, Point3D vertex2, Point3D vertex3, Color color, float reflectivity = 0f, float reflection_distance = 300f)
+            {
+                parameters = new SurfaceParam(color, reflectivity, reflection_distance);
+                polygon = new Polygon(vertex1, vertex2, vertex3);
+            }
+        }
+        public class SurfaceParam
         {
             public float reflectivity;
             public float reflection_distance;
             public Color color;
-
-            public Surface(Point3D vertex1, Point3D vertex2, Point3D vertex3, Color color, float reflec = 0f,float ref_dist = 300f)
-                :base( vertex1,  vertex2,  vertex3)
+            public SurfaceParam(Color color, float reflectivity = 0f, float reflection_distance = 300f)
             {
-                reflectivity = reflec;
-                reflection_distance = ref_dist;
+                this.reflectivity = reflectivity;
+                this.reflection_distance = reflection_distance;
                 this.color = color;
             }
+
         }
+        /*public class Surface1
+        {
+            public float reflectivity;
+            public float reflection_distance;
+            public Color color;
+            public 
+            public Surface1()
+        }*/
+
         public class Lightray : Vector
         {
             public Omnilight light;
@@ -229,12 +247,12 @@ namespace RTX3d_test
                 if(wall == ignore_wall)
                     continue; 
 
-                float pre_t = r.FindT(wall);
+                float pre_t = r.FindT(wall.polygon);
                 if (pre_t < r.t && pre_t > 0)
                 {
                     Point3D pnt = new Point3D(r.relative_end.x * pre_t + r.start.x, r.relative_end.y * pre_t + r.start.y, r.relative_end.z * pre_t + r.start.z);
 
-                    if (r.OnWall(pnt, wall))
+                    if (r.OnWall(pnt, wall.polygon))
                     {
                         r.hit_wall = wall;
                         r.t = pre_t;
@@ -246,24 +264,24 @@ namespace RTX3d_test
             if (r.hit_wall != null)
             {
                 r.light = new Lightray(r.hit_point, m_light.pos);
-                if (Vector.ScolarMult(new Point3D(r.hit_wall.A, r.hit_wall.B, r.hit_wall.C), r.light.relative_end) <= 0)
+                if (Vector.ScolarMult(new Point3D(r.hit_wall.polygon.A, r.hit_wall.polygon.B, r.hit_wall.polygon.C), r.light.relative_end) <= 0)
                 {
                     r.light = null; 
                     return;
                 }
 
-                foreach (Polygon wall in m_walls)
+                foreach (Surface wall in m_walls)
                 {
-                    if (wall == r.hit_wall)
+                    if (wall.polygon == r.hit_wall.polygon)
                         continue;
 
-                    float pre_t = r.light.FindT(wall);
+                    float pre_t = r.light.FindT(wall.polygon);
 
                     if (pre_t > 0 && pre_t <= 1)
                     {
                         Point3D pnt = new Point3D(r.light.relative_end.x * pre_t + r.light.start.x, r.light.relative_end.y * pre_t + r.light.start.y, r.light.relative_end.z * pre_t + r.light.start.z);
 
-                        if (r.light.OnWall(pnt, wall))
+                        if (r.light.OnWall(pnt, wall.polygon))
                         {
                             r.light = null;
                             break;
@@ -307,9 +325,8 @@ namespace RTX3d_test
                 brightness = input_brightness;
             }
         }
-        public void MakeCube(Point3D size, Point3D offset, float reflectivity, Color color)
+        public void MakeCube(Point3D size, Point3D offset, float reflectivity, Color color) 
         {
-            
            /* 000 011 010 */ m_walls.Add(new Surface(new Point3D(offset.x, offset.y, offset.z), new Point3D(offset.x, offset.y + size.y, offset.z + size.z), new Point3D(offset.x, offset.y + size.y, offset.z),color,reflectivity));
            /* 000 001 011 */ m_walls.Add(new Surface(new Point3D(offset.x, offset.y, offset.z), new Point3D(offset.x, offset.y, offset.z + size.z), new Point3D(offset.x, offset.y + size.y, offset.z + size.z), color, reflectivity));
            /* 001 101 111 */ m_walls.Add(new Surface(new Point3D(offset.x, offset.y, offset.z + size.z), new Point3D(offset.x + size.x, offset.y, offset.z + size.z), new Point3D(offset.x + size.x, offset.y + size.y, offset.z + size.z), color, reflectivity));
