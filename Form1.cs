@@ -5,7 +5,7 @@ using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 using System.Windows.Forms;
 using Simple3D;
 
@@ -27,6 +27,9 @@ namespace RTX3d_test
         int screen_height;
         int bounces;
         Omnilight m_light;
+        static Color ambient_color;
+        Thread thread1;
+        Thread thread2;
 
         public Form1()
         {
@@ -36,14 +39,15 @@ namespace RTX3d_test
             n_rays_x = screen_width;
             n_rays_y = screen_height;
             bounces = 3;
-            far = 170; // Дальность farplane
-            FOV_x = screen_width; // Ширина farplane
+            far = 170;
+            ambient_color = Color.FromArgb(120, 0, 0, 5);
+            FOV_x = screen_width; 
             FOV_y = screen_height;
             cam = new Point3D(10, 0, 100);
-            BackColor = Color.Black;
             gr = CreateGraphics();
             m_walls = new List<Surface>();
             m_rays = new List<Ray3D>();
+            thread1 = new Thread(T);
 
             int floor = -10;
             int ceiling = 200;
@@ -53,34 +57,34 @@ namespace RTX3d_test
             // Окружение
             {
                 /*Дальняя стена*/
-                m_walls.Add(new Surface(new Point3D(200, -200, floor), new Point3D(200, -200, ceiling), new Point3D(200, 200, floor), Color.FromArgb(255, 10, 10, 10), 1f));
-                m_walls.Add(new Surface(new Point3D(200, -200, ceiling), new Point3D(200, 200, ceiling), new Point3D(200, 200, floor), Color.FromArgb(255, 10, 10, 10), 1f));
+                m_walls.Add(new Surface(new Shape(new Point3D(200, -200, floor), new Point3D(200, -200, ceiling), new Point3D(200, 200, floor)), new SurfaceParam(Color.FromArgb(255, 10, 10, 10), 1f)));
+                m_walls.Add(new Surface(new Shape(new Point3D(200, -200, ceiling), new Point3D(200, 200, ceiling), new Point3D(200, 200, floor)), new SurfaceParam(Color.FromArgb(255, 10, 10, 10), 1f)));
 
                 /* Задняя стена*/
-                m_walls.Add(new Surface(new Point3D(0, -200, floor), new Point3D(0, 200, floor), new Point3D(0, -200, ceiling), Color.FromArgb(255, 100, 100, 10), 0.95f));
-                m_walls.Add(new Surface(new Point3D(0, -200, ceiling), new Point3D(0, 200, floor), new Point3D(0, 200, ceiling), Color.FromArgb(255, 100, 100, 10), 0.95f));
+                m_walls.Add(new Surface(new Shape(new Point3D(0, -200, floor), new Point3D(0, 200, floor), new Point3D(0, -200, ceiling)), new SurfaceParam(Color.FromArgb(255, 100, 100, 10), 0.95f)));
+                m_walls.Add(new Surface(new Shape(new Point3D(0, -200, ceiling), new Point3D(0, 200, floor), new Point3D(0, 200, ceiling)), new SurfaceParam(Color.FromArgb(255, 100, 100, 10), 0.95f)));
 
                 /*Правая стена*/
-                m_walls.Add(new Surface(new Point3D(200, 200, floor), new Point3D(200, 200, ceiling), new Point3D(0, 200, ceiling), Color.Blue, 0f));
-                m_walls.Add(new Surface(new Point3D(200, 200, floor), new Point3D(0, 200, ceiling), new Point3D(0, 200, floor), Color.Blue, 0f));
+                m_walls.Add(new Surface(new Shape(new Point3D(200, 200, floor), new Point3D(200, 200, ceiling), new Point3D(0, 200, ceiling)), new SurfaceParam(Color.Blue, 0f)));
+                m_walls.Add(new Surface(new Shape(new Point3D(200, 200, floor), new Point3D(0, 200, ceiling), new Point3D(0, 200, floor)), new SurfaceParam(Color.Blue, 0f)));
 
                 /* Левая стена*/
-                m_walls.Add(new Surface(new Point3D(200, -200, floor), new Point3D(0, -200, ceiling), new Point3D(200, -200, ceiling), Color.Red, 0f));
-                m_walls.Add(new Surface(new Point3D(200, -200, floor), new Point3D(0, -200, floor), new Point3D(0, -200, ceiling), Color.Red, 0f));
+                m_walls.Add(new Surface(new Shape(new Point3D(200, -200, floor), new Point3D(0, -200, ceiling), new Point3D(200, -200, ceiling)), new SurfaceParam(Color.Red, 0f)));
+                m_walls.Add(new Surface(new Shape(new Point3D(200, -200, floor), new Point3D(0, -200, floor), new Point3D(0, -200, ceiling)), new SurfaceParam(Color.Red, 0f)));
 
                 /* Пол*/
-                m_walls.Add(new Surface(new Point3D(200, 200, floor), new Point3D(0, 200, floor), new Point3D(200, -200, floor), Color.FromArgb(255, 150, 150, 150), 0.2f));
-                m_walls.Add(new Surface(new Point3D(0, 200, floor), new Point3D(0, -200, floor), new Point3D(200, -200, floor), Color.FromArgb(255, 150, 150, 150), 0.2f));
+                m_walls.Add(new Surface(new Shape(new Point3D(200, 200, floor), new Point3D(0, 200, floor), new Point3D(200, -200, floor)), new SurfaceParam(Color.FromArgb(255, 150, 150, 150), 0.2f)));
+                m_walls.Add(new Surface(new Shape(new Point3D(0, 200, floor), new Point3D(0, -200, floor), new Point3D(200, -200, floor)), new SurfaceParam(Color.FromArgb(255, 150, 150, 150), 0.2f)));
 
                 /* Потолок*/
-                m_walls.Add(new Surface(new Point3D(0, 200, ceiling), new Point3D(200, 200, ceiling), new Point3D(200, -200, ceiling), Color.FromArgb(255, 50, 50, 50), 0.6f, 50));
-                m_walls.Add(new Surface(new Point3D(0, 200, ceiling), new Point3D(200, -200, ceiling), new Point3D(0, -200, ceiling), Color.FromArgb(255, 50, 50, 50), 0.6f, 50));
+                m_walls.Add(new Surface(new Shape(new Point3D(0, 200, ceiling), new Point3D(200, 200, ceiling), new Point3D(200, -200, ceiling)), new SurfaceParam(Color.FromArgb(255, 50, 50, 50), 0.6f, 50)));
+                m_walls.Add(new Surface(new Shape(new Point3D(0, 200, ceiling), new Point3D(200, -200, ceiling), new Point3D(0, -200, ceiling)), new SurfaceParam(Color.FromArgb(255, 50, 50, 50), 0.6f, 50)));
             }
 
-            MakeCube(new Point3D(10, 30, 40), new Point3D(140, 20, floor), 0f, Color.DarkRed);
-            MakeCube(new Point3D(10, 30, 40), new Point3D(70, -50, floor), 0f, Color.DarkRed);
+            MakeCube(new Point3D(10, 30, 40), new Point3D(140, 20, floor), 0f, Color.Brown);
+            //MakeCube(new Point3D(10, 30, 40), new Point3D(70, -50, floor), 0f, Color.DarkRed);
             MakeCube(new Point3D(10, 30, 40), new Point3D(140, -50, floor), 0f, Color.DarkGreen);
-            MakeCube(new Point3D(10, 30, 40), new Point3D(70, 20, floor), 0f, Color.DarkGreen);
+            MakeCube(new Point3D(10, 30, 40), new Point3D(70, 20, floor), 0f, Color.DarkBlue);
             //MakeCube(new Point3D(20, 40, 10), new Point3D(100, -100, 30), 0f, Color.DarkRed);
 
 
@@ -111,33 +115,40 @@ namespace RTX3d_test
                     col = reflected_ray.CalculateColor();
                     reflection_distance = Math.Max(0, hit_wall.parameters.reflection_distance - Length(new Vector(reflected_ray.start, reflected_ray.hit_point))) / hit_wall.parameters.reflection_distance;
                 }
-                Color c = Color.Black;
+                Color c = ambient_color;
 
                 if (light != null)
                 {
                     float light_length = Length(light);
                     float fallof_power = (light.light.power - light_length) / light.light.power;
-                    float light_power = Math.Max(0, fallof_power);//fallof_power > 0 ? 1 / fallof_power : 1 ;
+                    float light_power = Math.Max(0, fallof_power);
 
-                    c = Color.FromArgb(Math.Min(255, (int)(light_power * light.light.color.A) + hit_wall.parameters.color.A),
+                  /*  c = Color.FromArgb(Math.Min(255, (int)(light_power * light.light.color.A) + hit_wall.parameters.color.A),
                         Math.Min(255, (int)(light_power * light.light.color.R) + hit_wall.parameters.color.R),
                         Math.Min(255, (int)(light_power * light.light.color.G) + hit_wall.parameters.color.G),
                         Math.Min(255, (int)(light_power * light.light.color.B) + hit_wall.parameters.color.B));
+                  */
+
+                    c = Color.FromArgb((int)(hit_wall.parameters.color.A * ((light.light.color.A + ambient_color.A) / 255.0) * (light_power / (Length(light) + 1))),
+                                       (int)(hit_wall.parameters.color.R * ((light.light.color.R + ambient_color.R) / 255.0) * (light_power / (Length(light) + 1))),
+                                       (int)(hit_wall.parameters.color.G * ((light.light.color.G + ambient_color.G) / 255.0) * (light_power / (Length(light) + 1))),
+                                       (int)(hit_wall.parameters.color.B * ((light.light.color.B + ambient_color.B) / 255.0) * (light_power / (Length(light) + 1))));
                 }
-                return Color.FromArgb(Math.Min(255, (int)(c.A + col.A * hit_wall.parameters.reflectivity * reflection_distance)),
+                return c;/*Color.FromArgb(Math.Min(255, (int)(c.A + col.A * hit_wall.parameters.reflectivity * reflection_distance)),
                                       Math.Min(255, (int)(c.R + col.R * hit_wall.parameters.reflectivity * reflection_distance)),
                                       Math.Min(255, (int)(c.G + col.G * hit_wall.parameters.reflectivity * reflection_distance)),
                                       Math.Min(255, (int)(c.B + col.B * hit_wall.parameters.reflectivity * reflection_distance)));
-            }
+            */
+                    }
             public void CalcReflection()
             {
                 Point3D zero = new Point3D(0, 0, 0);
-                Vector n = new Vector(zero, new Point3D(hit_wall.polygon.A, hit_wall.polygon.B, hit_wall.polygon.C));
-                n.Normalize();
-                float sm = ScolarMult(this, n);
-                Vector denum = new Vector(zero, new Point3D(n.relative_end.x * 2 * sm,
-                                                            n.relative_end.y * 2 * sm,
-                                                            n.relative_end.z * 2 * sm));
+                //Vector n = new Vector(zero, new Point3D(hit_wall.polygon.A, hit_wall.polygon.B, hit_wall.polygon.C));
+                //n.Normalize();
+                float sm = ScolarMult(this, hit_wall.shape.polygon.n);
+                Vector denum = new Vector(zero, new Point3D(hit_wall.shape.polygon.n.relative_end.x * 2 * sm,
+                                                            hit_wall.shape.polygon.n.relative_end.y * 2 * sm,
+                                                            hit_wall.shape.polygon.n.relative_end.z * 2 * sm));
 
                 reflected_ray = new Ray3D(hit_point,
                     new Point3D(relative_end.x - denum.relative_end.x + hit_point.x,
@@ -148,11 +159,11 @@ namespace RTX3d_test
         public class Surface
         {
             public SurfaceParam parameters;
-            public Polygon polygon;
-            public Surface(Point3D vertex1, Point3D vertex2, Point3D vertex3, Color color, float reflectivity = 0f, float reflection_distance = 300f)
+            public Shape shape;
+            public Surface(Shape shape, SurfaceParam parameters)
             {
-                parameters = new SurfaceParam(color, reflectivity, reflection_distance);
-                polygon = new Polygon(vertex1, vertex2, vertex3);
+                this.parameters = parameters;
+                this.shape = shape;
             }
         }
         public class SurfaceParam
@@ -168,15 +179,19 @@ namespace RTX3d_test
             }
 
         }
-        /*public class Surface1
+        public class Shape
         {
-            public float reflectivity;
-            public float reflection_distance;
-            public Color color;
-            public 
-            public Surface1()
-        }*/
-
+            public Polygon polygon;
+            public Sphere sphere;
+            public Shape(Point3D vertex1, Point3D vertex2, Point3D vertex3)
+            {
+                polygon = new Polygon(vertex1, vertex2, vertex3);
+            }
+            public Shape(Point3D center, float radius)
+            {
+                sphere = new Sphere(center,radius);
+            }
+        }
         public class Lightray : Vector
         {
             public Omnilight light;
@@ -247,12 +262,12 @@ namespace RTX3d_test
                 if(wall == ignore_wall)
                     continue; 
 
-                float pre_t = r.FindT(wall.polygon);
+                float pre_t = r.FindT(wall.shape.polygon);
                 if (pre_t < r.t && pre_t > 0)
                 {
                     Point3D pnt = new Point3D(r.relative_end.x * pre_t + r.start.x, r.relative_end.y * pre_t + r.start.y, r.relative_end.z * pre_t + r.start.z);
 
-                    if (r.OnWall(pnt, wall.polygon))
+                    if (r.OnWall(pnt, wall.shape.polygon))
                     {
                         r.hit_wall = wall;
                         r.t = pre_t;
@@ -264,7 +279,7 @@ namespace RTX3d_test
             if (r.hit_wall != null)
             {
                 r.light = new Lightray(r.hit_point, m_light.pos);
-                if (Vector.ScolarMult(new Point3D(r.hit_wall.polygon.A, r.hit_wall.polygon.B, r.hit_wall.polygon.C), r.light.relative_end) <= 0)
+                if (Vector.ScolarMult(new Point3D(r.hit_wall.shape.polygon.A, r.hit_wall.shape.polygon.B, r.hit_wall.shape.polygon.C), r.light.relative_end) <= 0)
                 {
                     r.light = null; 
                     return;
@@ -272,16 +287,16 @@ namespace RTX3d_test
 
                 foreach (Surface wall in m_walls)
                 {
-                    if (wall.polygon == r.hit_wall.polygon)
+                    if (wall.shape.polygon == r.hit_wall.shape.polygon)
                         continue;
 
-                    float pre_t = r.light.FindT(wall.polygon);
+                    float pre_t = r.light.FindT(wall.shape.polygon);
 
                     if (pre_t > 0 && pre_t <= 1)
                     {
                         Point3D pnt = new Point3D(r.light.relative_end.x * pre_t + r.light.start.x, r.light.relative_end.y * pre_t + r.light.start.y, r.light.relative_end.z * pre_t + r.light.start.z);
 
-                        if (r.light.OnWall(pnt, wall.polygon))
+                        if (r.light.OnWall(pnt, wall.shape.polygon))
                         {
                             r.light = null;
                             break;
@@ -327,18 +342,18 @@ namespace RTX3d_test
         }
         public void MakeCube(Point3D size, Point3D offset, float reflectivity, Color color) 
         {
-           /* 000 011 010 */ m_walls.Add(new Surface(new Point3D(offset.x, offset.y, offset.z), new Point3D(offset.x, offset.y + size.y, offset.z + size.z), new Point3D(offset.x, offset.y + size.y, offset.z),color,reflectivity));
-           /* 000 001 011 */ m_walls.Add(new Surface(new Point3D(offset.x, offset.y, offset.z), new Point3D(offset.x, offset.y, offset.z + size.z), new Point3D(offset.x, offset.y + size.y, offset.z + size.z), color, reflectivity));
-           /* 001 101 111 */ m_walls.Add(new Surface(new Point3D(offset.x, offset.y, offset.z + size.z), new Point3D(offset.x + size.x, offset.y, offset.z + size.z), new Point3D(offset.x + size.x, offset.y + size.y, offset.z + size.z), color, reflectivity));
-           /* 001 111 011 */ m_walls.Add(new Surface(new Point3D(offset.x, offset.y, offset.z + size.z), new Point3D(offset.x + size.x, offset.y + size.y, offset.z + size.z), new Point3D(offset.x, offset.y + size.y, offset.z + size.z), color, reflectivity));
-           /* 101 110 111 */ m_walls.Add(new Surface(new Point3D(offset.x + size.x, offset.y , offset.z + size.z), new Point3D(offset.x + size.x, offset.y + size.y, offset.z), new Point3D(offset.x + size.x, offset.y + size.y, offset.z + size.z), color, reflectivity));
-           /* 101 100 110 */ m_walls.Add(new Surface(new Point3D(offset.x + size.x, offset.y, offset.z + size.z), new Point3D(offset.x + size.x, offset.y, offset.z), new Point3D(offset.x + size.x, offset.y + size.y, offset.z), color, reflectivity));
-           /* 100 010 110 */ m_walls.Add(new Surface(new Point3D(offset.x + size.x, offset.y, offset.z), new Point3D(offset.x, offset.y + size.y, offset.z), new Point3D(offset.x + size.x, offset.y + size.y, offset.z), color, reflectivity));
-           /* 100 000 010 */ m_walls.Add(new Surface(new Point3D(offset.x + size.x, offset.y, offset.z), new Point3D(offset.x, offset.y, offset.z), new Point3D(offset.x, offset.y + size.y, offset.z), color, reflectivity));
-           /* 000 101 001 */ m_walls.Add(new Surface(new Point3D(offset.x, offset.y, offset.z), new Point3D(offset.x + size.x, offset.y, offset.z + size.z), new Point3D(offset.x, offset.y, offset.z + size.z), color, reflectivity));
-           /* 000 100 101 */ m_walls.Add(new Surface(new Point3D(offset.x, offset.y, offset.z), new Point3D(offset.x + size.x, offset.y, offset.z), new Point3D(offset.x + size.x, offset.y, offset.z + size.z), color, reflectivity));
-           /* 011 111 010 */ m_walls.Add(new Surface(new Point3D(offset.x, offset.y + size.y, offset.z + size.z), new Point3D(offset.x + size.x, offset.y + size.y, offset.z + size.z), new Point3D(offset.x, offset.y + size.y, offset.z), color, reflectivity));
-           /* 010 111 110 */ m_walls.Add(new Surface(new Point3D(offset.x, offset.y + size.y, offset.z), new Point3D(offset.x + size.x, offset.y + size.y, offset.z + size.z), new Point3D(offset.x + size.x, offset.y + size.y, offset.z), color, reflectivity));
+           /* 000 011 010 */ m_walls.Add(new Surface(new Shape(new Point3D(offset.x, offset.y, offset.z),                    new Point3D(offset.x, offset.y + size.y, offset.z + size.z),          new Point3D(offset.x, offset.y + size.y, offset.z)),                   new SurfaceParam(color, reflectivity)));
+           /* 000 001 011 */ m_walls.Add(new Surface(new Shape(new Point3D(offset.x, offset.y, offset.z),                    new Point3D(offset.x, offset.y, offset.z + size.z),                   new Point3D(offset.x, offset.y + size.y, offset.z + size.z)),          new SurfaceParam(color, reflectivity)));
+           /* 001 101 111 */ m_walls.Add(new Surface(new Shape(new Point3D(offset.x, offset.y, offset.z + size.z),           new Point3D(offset.x + size.x, offset.y, offset.z + size.z),          new Point3D(offset.x + size.x, offset.y + size.y, offset.z + size.z)), new SurfaceParam(color, reflectivity)));
+           /* 001 111 011 */ m_walls.Add(new Surface(new Shape(new Point3D(offset.x, offset.y, offset.z + size.z),           new Point3D(offset.x + size.x, offset.y + size.y, offset.z + size.z), new Point3D(offset.x, offset.y + size.y, offset.z + size.z)),          new SurfaceParam(color, reflectivity)));
+           /* 101 110 111 */ m_walls.Add(new Surface(new Shape(new Point3D(offset.x + size.x, offset.y , offset.z + size.z), new Point3D(offset.x + size.x, offset.y + size.y, offset.z),          new Point3D(offset.x + size.x, offset.y + size.y, offset.z + size.z)), new SurfaceParam(color, reflectivity)));
+           /* 101 100 110 */ m_walls.Add(new Surface(new Shape(new Point3D(offset.x + size.x, offset.y, offset.z + size.z),  new Point3D(offset.x + size.x, offset.y, offset.z),                   new Point3D(offset.x + size.x, offset.y + size.y, offset.z)),          new SurfaceParam(color, reflectivity)));
+           /* 100 010 110 */ m_walls.Add(new Surface(new Shape(new Point3D(offset.x + size.x, offset.y, offset.z),           new Point3D(offset.x, offset.y + size.y, offset.z),                   new Point3D(offset.x + size.x, offset.y + size.y, offset.z)),          new SurfaceParam(color, reflectivity)));
+           /* 100 000 010 */ m_walls.Add(new Surface(new Shape(new Point3D(offset.x + size.x, offset.y, offset.z),           new Point3D(offset.x, offset.y, offset.z),                            new Point3D(offset.x, offset.y + size.y, offset.z)),                   new SurfaceParam(color, reflectivity)));
+           /* 000 101 001 */ m_walls.Add(new Surface(new Shape(new Point3D(offset.x, offset.y, offset.z),                    new Point3D(offset.x + size.x, offset.y, offset.z + size.z),          new Point3D(offset.x, offset.y, offset.z + size.z)),                   new SurfaceParam(color, reflectivity)));
+           /* 000 100 101 */ m_walls.Add(new Surface(new Shape(new Point3D(offset.x, offset.y, offset.z),                    new Point3D(offset.x + size.x, offset.y, offset.z),                   new Point3D(offset.x + size.x, offset.y, offset.z + size.z)),          new SurfaceParam(color, reflectivity)));
+           /* 011 111 010 */ m_walls.Add(new Surface(new Shape(new Point3D(offset.x, offset.y + size.y, offset.z + size.z),  new Point3D(offset.x + size.x, offset.y + size.y, offset.z + size.z), new Point3D(offset.x, offset.y + size.y, offset.z)),                   new SurfaceParam(color, reflectivity)));
+           /* 010 111 110 */ m_walls.Add(new Surface(new Shape(new Point3D(offset.x, offset.y + size.y, offset.z),           new Point3D(offset.x + size.x, offset.y + size.y, offset.z + size.z), new Point3D(offset.x + size.x, offset.y + size.y, offset.z)),          new SurfaceParam(color, reflectivity)));
         }
         private void Form1_MouseDown(object sender, MouseEventArgs e)
         {

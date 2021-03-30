@@ -149,6 +149,7 @@ namespace Simple3D
         public float B;
         public float C;
         public float D;
+        public Vector n;
         public Polygon(Point3D vertex1, Point3D vertex2, Point3D vertex3)
         {
             this.vertex1 = vertex1;
@@ -173,6 +174,9 @@ namespace Simple3D
             B = v1.relative_end.z * v2.relative_end.x - v1.relative_end.x * v2.relative_end.z;
             C = v1.relative_end.x * v2.relative_end.y - v1.relative_end.y * v2.relative_end.x;
             D = (-vertex1.x * A) + (-vertex1.y * B) + (-vertex1.z * C);
+            n = new Vector(new Point3D(0, 0, 0), new Point3D(A, B, C));
+            n.Normalize();
+            
         }
 
     }
