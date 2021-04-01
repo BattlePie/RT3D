@@ -27,13 +27,13 @@ namespace Simple3D
             this.end = end;
             relative_end = new Point3D(end.x - start.x, end.y - start.y, end.z - start.z);
         }
-        public static float Length(Vector input_vector)
+        public static float Length(Vector vector)
         {
-            return (float)Math.Sqrt(input_vector.relative_end.x * input_vector.relative_end.x + input_vector.relative_end.y * input_vector.relative_end.y + input_vector.relative_end.z * input_vector.relative_end.z);
+            return (float)Math.Sqrt(vector.relative_end.x * vector.relative_end.x + vector.relative_end.y * vector.relative_end.y + vector.relative_end.z * vector.relative_end.z);
         }
-        public static float Length(Point3D vector_end_math_result)
+        public static float Length(Point3D vector_end)
         {
-            return (float)Math.Sqrt(vector_end_math_result.x * vector_end_math_result.x + vector_end_math_result.y * vector_end_math_result.y + vector_end_math_result.z * vector_end_math_result.z);
+            return (float)Math.Sqrt(vector_end.x * vector_end.x + vector_end.y * vector_end.y + vector_end.z * vector_end.z);
         }
         public static Point3D CrossProduct(Vector A, Vector B)
         {

@@ -28,37 +28,34 @@ namespace RTX3d_test
         int bounces;
         Omnilight m_light;
         static Color ambient_color;
-        Thread thread1;
-        Thread thread2;
 
         public Form1()
         {
             InitializeComponent();
             screen_width = ClientRectangle.Width;
-            screen_height = ClientRectangle.Height;
+            screen_height = ClientRectangle.Height - 1;
             n_rays_x = screen_width;
             n_rays_y = screen_height;
             bounces = 3;
             far = 170;
-            ambient_color = Color.FromArgb(120, 0, 0, 5);
+            ambient_color = Color.FromArgb(255, 15, 15, 15);
             FOV_x = screen_width; 
             FOV_y = screen_height;
             cam = new Point3D(10, 0, 100);
             gr = CreateGraphics();
             m_walls = new List<Surface>();
             m_rays = new List<Ray3D>();
-            thread1 = new Thread(T);
 
             int floor = -10;
             int ceiling = 200;
 
-            m_light = new Omnilight(new Point3D(105, 0, ceiling / 2), 200, Color.White, 200);
+            m_light = new Omnilight(new Point3D(105, 0, ceiling / 2), 400, Color.NavajoWhite, 200);
 
             // Окружение
             {
                 /*Дальняя стена*/
-                m_walls.Add(new Surface(new Shape(new Point3D(200, -200, floor), new Point3D(200, -200, ceiling), new Point3D(200, 200, floor)), new SurfaceParam(Color.FromArgb(255, 10, 10, 10), 1f)));
-                m_walls.Add(new Surface(new Shape(new Point3D(200, -200, ceiling), new Point3D(200, 200, ceiling), new Point3D(200, 200, floor)), new SurfaceParam(Color.FromArgb(255, 10, 10, 10), 1f)));
+                m_walls.Add(new Surface(new Shape(new Point3D(200, -200, floor), new Point3D(200, -200, ceiling), new Point3D(200, 200, floor)), new SurfaceParam(Color.FromArgb(255, 120, 10, 10), 1f, 300, 0.75f)));
+                m_walls.Add(new Surface(new Shape(new Point3D(200, -200, ceiling), new Point3D(200, 200, ceiling), new Point3D(200, 200, floor)), new SurfaceParam(Color.FromArgb(255, 120, 10, 10), 1f, 300, 0.75f)));
 
                 /* Задняя стена*/
                 m_walls.Add(new Surface(new Shape(new Point3D(0, -200, floor), new Point3D(0, 200, floor), new Point3D(0, -200, ceiling)), new SurfaceParam(Color.FromArgb(255, 100, 100, 10), 0.95f)));
@@ -77,19 +74,23 @@ namespace RTX3d_test
                 m_walls.Add(new Surface(new Shape(new Point3D(0, 200, floor), new Point3D(0, -200, floor), new Point3D(200, -200, floor)), new SurfaceParam(Color.FromArgb(255, 150, 150, 150), 0.2f)));
 
                 /* Потолок*/
-                m_walls.Add(new Surface(new Shape(new Point3D(0, 200, ceiling), new Point3D(200, 200, ceiling), new Point3D(200, -200, ceiling)), new SurfaceParam(Color.FromArgb(255, 50, 50, 50), 0.6f, 50)));
-                m_walls.Add(new Surface(new Shape(new Point3D(0, 200, ceiling), new Point3D(200, -200, ceiling), new Point3D(0, -200, ceiling)), new SurfaceParam(Color.FromArgb(255, 50, 50, 50), 0.6f, 50)));
+                m_walls.Add(new Surface(new Shape(new Point3D(0, 200, ceiling), new Point3D(200, 200, ceiling), new Point3D(200, -200, ceiling)), new SurfaceParam(Color.FromArgb(255, 50, 50, 50), 0.6f, 200)));
+                m_walls.Add(new Surface(new Shape(new Point3D(0, 200, ceiling), new Point3D(200, -200, ceiling), new Point3D(0, -200, ceiling)), new SurfaceParam(Color.FromArgb(255, 50, 50, 50), 0.6f, 200)));
             }
 
             MakeCube(new Point3D(10, 30, 40), new Point3D(140, 20, floor), 0f, Color.Brown);
-            //MakeCube(new Point3D(10, 30, 40), new Point3D(70, -50, floor), 0f, Color.DarkRed);
+            MakeCube(new Point3D(10, 30, 40), new Point3D(70, -50, floor), 0f, Color.DarkRed);
             MakeCube(new Point3D(10, 30, 40), new Point3D(140, -50, floor), 0f, Color.DarkGreen);
             MakeCube(new Point3D(10, 30, 40), new Point3D(70, 20, floor), 0f, Color.DarkBlue);
             //MakeCube(new Point3D(20, 40, 10), new Point3D(100, -100, 30), 0f, Color.DarkRed);
 
-
-            SetRays(m_rays);
-            FillT(m_rays);
+            SetRays();
+            FillT();
+            /*
+            Thread thread1 = new Thread(new ThreadStart(SetRays()));
+            Thread thread2 = new Thread(new ThreadStart(FillT()));
+            thread1.Start();
+            thread2.Start();*/
         }
         public class Ray3D : Vector
         {
@@ -108,11 +109,11 @@ namespace RTX3d_test
             public Color CalculateColor()
             {
                 float reflection_distance = 0;
-                Color col = Color.Black;
+                Color reflection_color = Color.Black;
 
                 if (reflected_ray != null && reflected_ray.hit_wall != null)
                 {
-                    col = reflected_ray.CalculateColor();
+                    reflection_color = reflected_ray.CalculateColor();
                     reflection_distance = Math.Max(0, hit_wall.parameters.reflection_distance - Length(new Vector(reflected_ray.start, reflected_ray.hit_point))) / hit_wall.parameters.reflection_distance;
                 }
                 Color c = ambient_color;
@@ -121,25 +122,26 @@ namespace RTX3d_test
                 {
                     float light_length = Length(light);
                     float fallof_power = (light.light.power - light_length) / light.light.power;
-                    float light_power = Math.Max(0, fallof_power);
+                    float light_power = Math.Max(0, fallof_power * fallof_power);
 
-                  /*  c = Color.FromArgb(Math.Min(255, (int)(light_power * light.light.color.A) + hit_wall.parameters.color.A),
-                        Math.Min(255, (int)(light_power * light.light.color.R) + hit_wall.parameters.color.R),
-                        Math.Min(255, (int)(light_power * light.light.color.G) + hit_wall.parameters.color.G),
-                        Math.Min(255, (int)(light_power * light.light.color.B) + hit_wall.parameters.color.B));
-                  */
-
-                    c = Color.FromArgb((int)(hit_wall.parameters.color.A * ((light.light.color.A + ambient_color.A) / 255.0) * (light_power / (Length(light) + 1))),
-                                       (int)(hit_wall.parameters.color.R * ((light.light.color.R + ambient_color.R) / 255.0) * (light_power / (Length(light) + 1))),
-                                       (int)(hit_wall.parameters.color.G * ((light.light.color.G + ambient_color.G) / 255.0) * (light_power / (Length(light) + 1))),
-                                       (int)(hit_wall.parameters.color.B * ((light.light.color.B + ambient_color.B) / 255.0) * (light_power / (Length(light) + 1))));
+                    float p1 = light_power / 255.0f;
+                    c = Color.FromArgb(255,
+                                       Math.Min(255,(int)(hit_wall.parameters.color.R * (light.light.color.R * p1 + ambient_color.R / 255f))),
+                                       Math.Min(255,(int)(hit_wall.parameters.color.G * (light.light.color.G * p1 + ambient_color.G / 255f))),
+                                       Math.Min(255,(int)(hit_wall.parameters.color.B * (light.light.color.B * p1 + ambient_color.B / 255f))));
                 }
-                return c;/*Color.FromArgb(Math.Min(255, (int)(c.A + col.A * hit_wall.parameters.reflectivity * reflection_distance)),
-                                      Math.Min(255, (int)(c.R + col.R * hit_wall.parameters.reflectivity * reflection_distance)),
-                                      Math.Min(255, (int)(c.G + col.G * hit_wall.parameters.reflectivity * reflection_distance)),
-                                      Math.Min(255, (int)(c.B + col.B * hit_wall.parameters.reflectivity * reflection_distance)));
-            */
-                    }
+                float reflection_coefficient = hit_wall.parameters.reflectivity * reflection_distance;
+
+                float metallic_r = 1 - hit_wall.parameters.metalness * (1 - hit_wall.parameters.color.R / 255f);
+                float metallic_g = 1 - hit_wall.parameters.metalness * (1 - hit_wall.parameters.color.G / 255f);
+                float metallic_b = 1 - hit_wall.parameters.metalness * (1 - hit_wall.parameters.color.B / 255f);
+
+                return Color.FromArgb(255,
+                                      Math.Min(255, (int)(c.R + reflection_color.R * reflection_coefficient * metallic_r)),
+                                      Math.Min(255, (int)(c.G + reflection_color.G * reflection_coefficient * metallic_g)),
+                                      Math.Min(255, (int)(c.B + reflection_color.B * reflection_coefficient * metallic_b)));
+            
+            }
             public void CalcReflection()
             {
                 Point3D zero = new Point3D(0, 0, 0);
@@ -170,12 +172,14 @@ namespace RTX3d_test
         {
             public float reflectivity;
             public float reflection_distance;
+            public float metalness;
             public Color color;
-            public SurfaceParam(Color color, float reflectivity = 0f, float reflection_distance = 300f)
+            public SurfaceParam(Color color, float reflectivity = 0f, float reflection_distance = 300f, float metalness = 0.1f)
             {
                 this.reflectivity = reflectivity;
                 this.reflection_distance = reflection_distance;
                 this.color = color;
+                this.metalness = metalness;
             }
 
         }
@@ -221,7 +225,7 @@ namespace RTX3d_test
         {
         
         }
-        public void SetRays(List<Ray3D> vectors)
+        public void SetRays()
         {
             for (int j = 0; j < n_rays_y; j++)
             {
@@ -232,14 +236,14 @@ namespace RTX3d_test
                                     -FOV_x / 2 + (FOV_x / n_rays_x) * i,
                                     -FOV_y / 2 + (FOV_y / n_rays_y) * j));
                     
-                    vectors.Add(r);
+                    m_rays.Add(r);
                 }
             }
 
         }
-        public void FillT(List<Ray3D> rays)
+        public void FillT()
         {
-            foreach (Ray3D r in rays)
+            foreach (Ray3D r in m_rays)
             {
                 TestRay(r);
                 if(r.hit_wall != null)
