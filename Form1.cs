@@ -41,7 +41,7 @@ namespace RTX3d_test
             n_rays_y = screen_height;
             bounces = 3;
             far = 170;
-            ambient_color = Color.FromArgb(255, 15, 15, 15);
+            ambient_color = Color.FromArgb(10, 10, 20);
             FOV_x = screen_width; 
             FOV_y = screen_height;
             cam = new Point3D(10, 0, 100);
@@ -52,17 +52,32 @@ namespace RTX3d_test
             int floor = -10;
             int ceiling = 200;
 
-            m_light = new Omnilight(new Point3D(105, 0, ceiling / 2), 400, Color.White, 200);
-
-            Bitmap test_texture = new Bitmap("D:\\textures\\wooden_floor.bmp");
+            m_light = new Omnilight(new Point3D(105, 0, ceiling / 2), 500, Color.White, 200);
 
             if (m_enable_room)
             // Окружение
             {
                 /*Дальняя стена*/
-                m_walls.Add(new Surface(new Shape(new Point3D(200, -200, floor), new Point3D(200, -200, ceiling), new Point3D(200, 200, floor)), new SurfaceParam(Color.Red, 1f, 300, 1f)));
-                m_walls.Add(new Surface(new Shape(new Point3D(200, -200, ceiling), new Point3D(200, 200, ceiling), new Point3D(200, 200, floor)), new SurfaceParam(Color.Red, 1f, 300, 1f)));
+                Surface far_wall1 = new Surface(new Shape(new Point3D(200, -201 + 201, ceiling + 200), new Point3D(201, 200 + 400, floor - 200), new Point3D(201, -200 - 400, floor - 200)), new SurfaceParam(Color.Black, 1f, 300, 0f));
+                //Surface far_wall2 = new Surface(new Shape(new Point3D(200, -201, ceiling), new Point3D(201, 200, ceiling), new Point3D(200, 200, floor)), new SurfaceParam(Color.Black, 1f, 300, 0f));
+                /* Параметры дальней стены */
+                {
+                    Bitmap normal_map = new Bitmap("D:\\textures\\normalmap4.bmp");
+                    far_wall1.parameters.normal_map = normal_map;
+                    //far_wall2.parameters.normal_map = normal_map;
 
+                    
+                    far_wall1.parameters.uv1 = new PointF(0, 0);
+                    far_wall1.parameters.uv2 = new PointF(far_wall1.parameters.normal_map.Width, 0);
+                    far_wall1.parameters.uv3 = new PointF(0, far_wall1.parameters.normal_map.Height);
+
+                    /*far_wall2.parameters.uv1 = new PointF(0, far_wall2.parameters.normal_map.Height);
+                    far_wall2.parameters.uv2 = new PointF(0, 0);
+                    far_wall2.parameters.uv3 = new PointF(far_wall2.parameters.normal_map.Width, 0);
+                    */
+                    m_walls.Add(far_wall1);
+                    //m_walls.Add(far_wall2);
+                }
                 /* Задняя стена*/
                 m_walls.Add(new Surface(new Shape(new Point3D(0, -200, floor), new Point3D(0, 200, floor), new Point3D(0, -200, ceiling)), new SurfaceParam(Color.FromArgb(255, 100, 100, 100), 0.95f)));
                 m_walls.Add(new Surface(new Shape(new Point3D(0, -200, ceiling), new Point3D(0, 200, floor), new Point3D(0, 200, ceiling)), new SurfaceParam(Color.FromArgb(255, 100, 100, 100), 0.95f)));
@@ -78,25 +93,28 @@ namespace RTX3d_test
                 /* Пол*/
                 Surface floor1 = new Surface(new Shape(new Point3D(200, 200, floor), new Point3D(0, 200, floor), new Point3D(201, -200, floor)), new SurfaceParam(Color.White, 0.1f, 300, 0.1f));
                 Surface floor2 = new Surface(new Shape(new Point3D(0, 200, floor), new Point3D(0, -200, floor), new Point3D(201, -200, floor)), new SurfaceParam(Color.White, 0.1f, 300, 0.1f));
-                floor1.parameters.texture = test_texture;
-                floor2.parameters.texture = test_texture;
+                /* Параметры пола */
+                {
+                    Bitmap texture = new Bitmap("D:\\textures\\wooden_floor.bmp");
+                    floor1.parameters.texture = texture;
+                    floor2.parameters.texture = texture;
 
-                floor1.parameters.uv1 = new PointF(0, 0);
-                floor1.parameters.uv2 = new PointF(floor1.parameters.texture.Width, 0);
-                floor1.parameters.uv3 = new PointF(0, floor1.parameters.texture.Height);
+                    floor1.parameters.uv1 = new PointF(0, 0);
+                    floor1.parameters.uv2 = new PointF(floor1.parameters.texture.Width, 0);
+                    floor1.parameters.uv3 = new PointF(0, floor1.parameters.texture.Height);
 
-                floor2.parameters.uv2 = new PointF(0, 0);
-                floor2.parameters.uv3 = new PointF(floor1.parameters.texture.Width, 0);
-                floor2.parameters.uv1 = new PointF(0, floor1.parameters.texture.Height);
+                    floor2.parameters.uv1 = new PointF(0, floor1.parameters.texture.Height);
+                    floor2.parameters.uv2 = new PointF(0, 0);
+                    floor2.parameters.uv3 = new PointF(floor1.parameters.texture.Width, 0);
 
-                m_walls.Add(floor1);
-                m_walls.Add(floor2);
+                    m_walls.Add(floor1);
+                    m_walls.Add(floor2);
+                }
 
                 /* Потолок*/
                 m_walls.Add(new Surface(new Shape(new Point3D(0, 200, ceiling), new Point3D(200, 200, ceiling), new Point3D(200, -200, ceiling)), new SurfaceParam(Color.FromArgb(255, 50, 50, 50), 0.6f, 200)));
                 m_walls.Add(new Surface(new Shape(new Point3D(0, 200, ceiling), new Point3D(200, -200, ceiling), new Point3D(0, -200, ceiling)), new SurfaceParam(Color.FromArgb(255, 50, 50, 50), 0.6f, 200)));
             }
-
             if (m_enable_boxes)
             {
                 MakeCube(new Point3D(10, 30, 40), new Point3D(140, 20, floor), 0f, Color.Yellow);
@@ -107,11 +125,6 @@ namespace RTX3d_test
             }
             SetRays();
             FillT();
-            /*
-            Thread thread1 = new Thread(new ThreadStart(SetRays()));
-            Thread thread2 = new Thread(new ThreadStart(FillT()));
-            thread1.Start();
-            thread2.Start();*/
         }
         public class Ray3D : Vector
         {
@@ -137,8 +150,11 @@ namespace RTX3d_test
                     reflection_color = reflected_ray.CalculateColor();
                     reflection_distance = Math.Max(0, hit_wall.parameters.reflection_distance - Length(new Vector(reflected_ray.start, reflected_ray.hit_point))) / hit_wall.parameters.reflection_distance;
                 }
-                Color c = ambient_color;
-
+                if (hit_wall != null)
+                {
+                    Color c = Color.FromArgb(ambient_color.R / 255 * hit_wall.parameters.color.R,
+                                             ambient_color.G / 255 * hit_wall.parameters.color.G,
+                                             ambient_color.B / 255 * hit_wall.parameters.color.B);
                 if (light != null)
                 {
                     float light_length = Length(light);
@@ -150,7 +166,7 @@ namespace RTX3d_test
 
                     if (hit_wall.parameters.texture != null)
                     {
-                        PointF uv_coords = hit_wall.CalculateUVCoordinates(this, hit_wall);
+                        PointF uv_coords = hit_wall.CalculateUVCoordinates(this, hit_wall, hit_wall.parameters.texture);
                         hitwall_color = hit_wall.parameters.texture.GetPixel((int)(uv_coords.X),
                                                                              (int)(uv_coords.Y)); 
                     }
@@ -160,8 +176,6 @@ namespace RTX3d_test
                                            Math.Min(255, (int)(hitwall_color.B * (light.light.color.B * p1 + ambient_color.B / 255f))));
                 }
 
-                if (hit_wall != null)
-                {
                     float reflection_coefficient = hit_wall.parameters.reflectivity * reflection_distance;
 
                     float metallic_r = 1 - hit_wall.parameters.metalness * (1 - hit_wall.parameters.color.R / 255f);
@@ -179,8 +193,11 @@ namespace RTX3d_test
             {
                 Point3D zero = new Point3D(0, 0, 0);
                 //Vector n = new Vector(zero, new Point3D(hit_wall.polygon.A, hit_wall.polygon.B, hit_wall.polygon.C));
-                //n.Normalize();
-                float sm = ScolarMult(this, hit_wall.shape.polygon.n);
+                //hit_wall.shape.polygon.n.Normalize();
+
+                Vector new_n = hit_wall.CalculateNormalCoordinates(this);
+                
+                float sm = ScolarMult(this, new_n);
                 Vector denum = new Vector(zero, new Point3D(hit_wall.shape.polygon.n.relative_end.x * 2 * sm,
                                                             hit_wall.shape.polygon.n.relative_end.y * 2 * sm,
                                                             hit_wall.shape.polygon.n.relative_end.z * 2 * sm));
@@ -200,7 +217,7 @@ namespace RTX3d_test
                 this.parameters = parameters;
                 this.shape = shape;
             }
-            public PointF CalculateUVCoordinates(Ray3D ray, Surface textured_surface)
+            public Point CalculateUVCoordinates(Ray3D ray, Surface textured_surface, Bitmap bitmap)
             {
                 Point3D A = textured_surface.shape.polygon.vertex1;
                 Point3D B = textured_surface.shape.polygon.vertex2;
@@ -215,12 +232,32 @@ namespace RTX3d_test
                 PointF Buv = textured_surface.parameters.uv2;
                 PointF Cuv = textured_surface.parameters.uv3;
 
-                float u = BaryA * Auv.X + BaryB * Buv.X + BaryC * Cuv.X;
-                float v = BaryA * Auv.Y + BaryB * Buv.Y + BaryC * Cuv.Y;
+                int u = Math.Abs((int)(BaryA * Auv.X + BaryB * Buv.X + BaryC * Cuv.X)) % bitmap.Width;
+                int v = Math.Abs((int)(BaryA * Auv.Y + BaryB * Buv.Y + BaryC * Cuv.Y)) % bitmap.Height;
 
-                return new PointF(u, v);
+                return new Point(u, v);
+            }
+            public Vector CalculateNormalCoordinates(Ray3D hit_ray)
+            {
+                Vector Z = shape.polygon.n;
+                Z.Normalize();
+                if (parameters.normal_map == null)
+                    return Z;
 
+                Point UV = CalculateUVCoordinates(hit_ray, this, parameters.normal_map);
+                Color test_normal = parameters.normal_map.GetPixel(UV.X,UV.Y);
 
+                Vector X = new Vector(shape.polygon.vertex1, shape.polygon.vertex2);
+                X.Normalize();
+                Vector Y = new Vector(new Point3D(0, 0, 0), Vector.CrossProduct(Z, X));
+                Y.Normalize();
+
+                Vector tmp = new Vector(new Point3D(0, 0, 0), new Point3D(
+                                   (test_normal.R - 128) * X.relative_end.x + (test_normal.G - 128) * Y.relative_end.x + test_normal.B * Z.relative_end.x,
+                                   (test_normal.R - 128) * X.relative_end.y + (test_normal.G - 128) * Y.relative_end.y + test_normal.B * Z.relative_end.y,
+                                   (test_normal.R - 128) * X.relative_end.z + (test_normal.G - 128) * Y.relative_end.z + test_normal.B * Z.relative_end.z));
+                tmp.Normalize();
+                return tmp;
             }
         }
         public class SurfaceParam
@@ -230,6 +267,7 @@ namespace RTX3d_test
             public float metalness;
             public Color color;
             public Bitmap texture;
+            public Bitmap normal_map;
             public PointF uv1;
             public PointF uv2;
             public PointF uv3;
@@ -399,7 +437,7 @@ namespace RTX3d_test
         }
         private void Form1_MouseDown(object sender, MouseEventArgs e)
         {
-            Ray3D r = m_rays[(screen_height - e.Y) * n_rays_x + e.X];
+             Ray3D r = m_rays[(screen_height - e.Y) * n_rays_x + e.X];
             r.hit_wall = null;
             r.t = 10000;
             TestRay(r);
