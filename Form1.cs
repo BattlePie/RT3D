@@ -17,10 +17,10 @@ namespace RTX3d_test
         Graphics gr;
         List<Ray3D> m_rays;
         List<Surface> m_walls;
-        int angle;
+        float angle_x;
+        float angle_y;
         int n_rays_x;
         int n_rays_y;
-        int far;
         int FOV_x;
         int FOV_y;
         int screen_width;
@@ -40,14 +40,16 @@ namespace RTX3d_test
             n_rays_x = screen_width;
             n_rays_y = screen_height;
             bounces = 3;
-            far = 170;
             ambient_color = Color.FromArgb(10, 10, 20);
             FOV_x = screen_width; 
             FOV_y = screen_height;
-            cam = new Point3D(10, 0, 100);
+            cam = new Point3D(10, -190, 100);
             gr = CreateGraphics();
             m_walls = new List<Surface>();
             m_rays = new List<Ray3D>();
+
+            angle_x = (float)Math.PI * 0.75f;//right to left
+            angle_y = (float)Math.PI - 0.5f;//bottom to top
 
             int floor = -10;
             int ceiling = 200;
@@ -55,10 +57,9 @@ namespace RTX3d_test
             m_light = new Omnilight(new Point3D(105, 0, ceiling / 2), 500, Color.White, 200);
 
             if (m_enable_room)
-            // Окружение
             {
                 /*Дальняя стена*/
-                Surface far_wall1 = new Surface(new Shape(new Point3D(200, -201 + 201, ceiling + 200), new Point3D(201, 200 + 400, floor - 200), new Point3D(201, -200 - 400, floor - 200)), new SurfaceParam(Color.Black, 1f, 300, 0f));
+                Surface far_wall1 = new Surface(new Shape(new Point3D(200, -201 + 201, ceiling + 200), new Point3D(201, 200 + 400, floor - 200), new Point3D(201, -200 - 400, floor - 200)), new SurfaceParam(Color.Black,1,300,0));
                 //Surface far_wall2 = new Surface(new Shape(new Point3D(200, -201, ceiling), new Point3D(201, 200, ceiling), new Point3D(200, 200, floor)), new SurfaceParam(Color.Black, 1f, 300, 0f));
                 /* Параметры дальней стены */
                 {
@@ -79,8 +80,8 @@ namespace RTX3d_test
                     //m_walls.Add(far_wall2);
                 }
                 /* Задняя стена*/
-                m_walls.Add(new Surface(new Shape(new Point3D(0, -200, floor), new Point3D(0, 200, floor), new Point3D(0, -200, ceiling)), new SurfaceParam(Color.FromArgb(255, 100, 100, 100), 0.95f)));
-                m_walls.Add(new Surface(new Shape(new Point3D(0, -200, ceiling), new Point3D(0, 200, floor), new Point3D(0, 200, ceiling)), new SurfaceParam(Color.FromArgb(255, 100, 100, 100), 0.95f)));
+                m_walls.Add(new Surface(new Shape(new Point3D(0, -200, floor), new Point3D(0, 200, floor), new Point3D(0, -200, ceiling)), new SurfaceParam(Color.Black, 1f, 10000)));
+                m_walls.Add(new Surface(new Shape(new Point3D(0, -200, ceiling), new Point3D(0, 200, floor), new Point3D(0, 200, ceiling)), new SurfaceParam(Color.Black, 1f, 100000)));
 
                 /*Правая стена*/
                 m_walls.Add(new Surface(new Shape(new Point3D(200, 200, floor), new Point3D(200, 200, ceiling), new Point3D(0, 200, ceiling)), new SurfaceParam(Color.Blue, 0f)));
@@ -123,8 +124,27 @@ namespace RTX3d_test
                 MakeCube(new Point3D(10, 30, 40), new Point3D(70, 20, floor), 0f, Color.DarkBlue);
                 //MakeCube(new Point3D(20, 40, 10), new Point3D(100, -100, 30), 0f, Color.DarkRed);
             }
+
+            NewFrame();
+        }
+        public void NewFrame()
+        {
             SetRays();
             FillT();
+        }
+        public Bitmap FillFrame()
+        {
+            Bitmap res = new Bitmap(n_rays_x, n_rays_y);
+
+            for (int i = 0; i < n_rays_x; i++)
+            {
+                for (int j = 0; j < n_rays_y; j++)
+                {
+                    res.SetPixel(i, j, m_rays[j * n_rays_x + i].CalculateColor());
+                }
+            }
+            res.Save("D://RT_images/res.bmp");
+            return res;
         }
         public class Ray3D : Vector
         {
@@ -245,7 +265,7 @@ namespace RTX3d_test
                     return Z;
 
                 Point UV = CalculateUVCoordinates(hit_ray, this, parameters.normal_map);
-                Color test_normal = parameters.normal_map.GetPixel(UV.X,UV.Y);
+                Color test_normal = parameters.normal_map.GetPixel(UV.X, UV.Y);
 
                 Vector X = new Vector(shape.polygon.vertex1, shape.polygon.vertex2);
                 X.Normalize();
@@ -256,7 +276,7 @@ namespace RTX3d_test
                                    (test_normal.R - 128) * X.relative_end.x + (test_normal.G - 128) * Y.relative_end.x + test_normal.B * Z.relative_end.x,
                                    (test_normal.R - 128) * X.relative_end.y + (test_normal.G - 128) * Y.relative_end.y + test_normal.B * Z.relative_end.y,
                                    (test_normal.R - 128) * X.relative_end.z + (test_normal.G - 128) * Y.relative_end.z + test_normal.B * Z.relative_end.z));
-                tmp.Normalize();
+                tmp.Normalize(); // tmp is a normal, not a reflected ray
                 return tmp;
             }
         }
@@ -300,7 +320,6 @@ namespace RTX3d_test
             {
             }
         }
-
         public struct Omnilight
         {
             public Point3D pos;
@@ -315,7 +334,6 @@ namespace RTX3d_test
                 this.fallof_distance = fallof_distance;
             }
         }
-
         private void Form1_Load(object sender, EventArgs e)
         {
         
@@ -326,12 +344,22 @@ namespace RTX3d_test
             {
                 for (int i = 0; i < n_rays_x; i++)
                 {
-                    Ray3D r = new Ray3D(cam,
-                        new Point3D(far,
-                                    -FOV_x / 2 + (FOV_x / n_rays_x) * i,
-                                    -FOV_y / 2 + (FOV_y / n_rays_y) * j));
-                    
-                    m_rays.Add(r);
+                    {/*
+                            Ray3D r = new Ray3D(cam,
+                                new Point3D(far,
+                                            -FOV_x / 2 + (FOV_x / n_rays_x * i),
+                                            -FOV_y / 2 + (FOV_y / n_rays_y * j)));
+                            m_rays.Add(r); */
+                    }
+                    {
+                        float v_x = 2.0f * i / n_rays_x - 1;
+                        float v_y = 2.0f * j / n_rays_y - 1;
+                        Ray3D r = new Ray3D(cam,
+                            new Point3D(cam.x + ((float)(Math.Sin(angle_x) * Math.Tan(v_x) + Math.Cos(angle_x)) / (float)Math.Cos(angle_x)),
+                                        cam.y + ((float)(Math.Sin(angle_x) - Math.Cos(angle_x) * Math.Tan(v_x))),
+                                        cam.z + ((float)(Math.Sin(angle_y) - Math.Cos(angle_y) * Math.Tan(v_y))) / (float)Math.Cos(angle_y)));
+                        m_rays.Add(r);
+                    }
                 }
             }
 
@@ -411,14 +439,7 @@ namespace RTX3d_test
         }
         private void Form1_Paint(object sender, PaintEventArgs e)
         {
-            for (int i = 0; i < n_rays_x; i++)
-            {
-                for (int j = 0; j < n_rays_y; j++)
-                {
-                        Brush brush = new SolidBrush(m_rays[j * n_rays_x + i].CalculateColor());
-                        gr.FillRectangle(brush, i, screen_height - j , 1, 1);
-                }
-            }
+            e.Graphics.DrawImage(FillFrame(),0,0);
         }
         public void MakeCube(Point3D size, Point3D offset, float reflectivity, Color color) 
         {

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 namespace Simple3D
 {
     public class Point3D
@@ -189,5 +188,15 @@ namespace Simple3D
             this.center = center;
             this.radius = radius;
         }
+        /*Vector FindNormal(Vector input)
+        {
+            intersection_point = 
+            Vector normal = new Vector(center, intersection_point);
+            return normal.Normalize();
+        }
+        Point3D VectorToSphereIntersectionPoint(Vector line)
+        {
+
+        }*/
     }
 }
