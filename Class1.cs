@@ -108,18 +108,6 @@ namespace Simple3D
             else
                 return -1;
         }
-        public float FindT(Sphere sph)
-        {
-            Polygon poly = new Polygon(Normalize(new Vector(relative_end, new Point3D(0, 0, 0))));
-            Point3D intersection_point = FindVectorToPolygonIntersectionPoint(poly);
-            Vector center_to_IP = new Vector(sph.center, intersection_point);
-            Vector res_ray = new Vector(start, intersection_point);
-
-            if (Length(center_to_IP) <= sph.radius)
-                return Length(res_ray) / Length(this);
-            else
-                return -1;
-        }
         public bool OnWall(Point3D m, Polygon poly)
         {
             Vector cl1 = new Vector(poly.vertex1, m);
@@ -136,6 +124,23 @@ namespace Simple3D
             float Smult3 = ScolarMult(Vmult3, Vmult1);
 
             return Smult1 >= 0 && Smult2 >= 0 && Smult3 >= 0;
+        }
+        public bool OnSphere(Vector line, Sphere sph)
+        {
+            float a = line.relative_end.x * line.relative_end.x + line.relative_end.y * line.relative_end.y + line.relative_end.z * line.relative_end.z;
+            float b = 2 * (line.relative_end.x * line.start.x + line.relative_end.y * line.start.y + line.relative_end.z * line.start.z);
+            float c = line.start.x * line.start.x + line.start.y * line.start.y + line.start.z * line.start.z - sph.radius * sph.radius;
+            float Discriminant = b * b - 4 * a * c;
+            return Discriminant >= 0;
+        }
+        public float FindT(Sphere sph)
+        {
+            float a = end.x * end.x + end.y * end.y + end.z * end.z;
+            float b = 2 * (end.x * start.x + end.y * start.y + end.z * start.z);
+            float c = start.x * start.x + start.y * start.y + start.z * start.z - sph.radius * sph.radius;
+            float discriminant = b * b - 4 * a * c;
+
+            return (-b - (float)Math.Sqrt(discriminant)) / (2 * a);
         }
 
     }
@@ -188,15 +193,14 @@ namespace Simple3D
             this.center = center;
             this.radius = radius;
         }
-        /*Vector FindNormal(Vector input)
+        Vector FindNormal(Vector input)
         {
-            intersection_point = 
-            Vector normal = new Vector(center, intersection_point);
-            return normal.Normalize();
+            float t = input.FindT(this);
+            Vector n = new Vector(new Point3D(center.x, center.y, center.z), new Point3D(input.end.x * t,
+            input.end.y * t,
+            input.end.z * t));
+            n.Normalize();
+            return n;
         }
-        Point3D VectorToSphereIntersectionPoint(Vector line)
-        {
-
-        }*/
     }
 }

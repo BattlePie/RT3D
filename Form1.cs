@@ -13,6 +13,9 @@ namespace RTX3d_test
 {
     public partial class Form1 : Form
     {
+        //X is forward
+        //Y is right
+        //Z is up
         Point3D cam;
         Graphics gr;
         List<Ray3D> m_rays;
@@ -21,8 +24,6 @@ namespace RTX3d_test
         float angle_y;
         int n_rays_x;
         int n_rays_y;
-        int FOV_x;
-        int FOV_y;
         int screen_width;
         int screen_height;
         int bounces;
@@ -31,6 +32,7 @@ namespace RTX3d_test
 
         bool m_enable_room = true;
         bool m_enable_boxes = true;
+        bool m_enable_plane = false;
 
         public Form1()
         {
@@ -41,14 +43,11 @@ namespace RTX3d_test
             n_rays_y = screen_height;
             bounces = 3;
             ambient_color = Color.FromArgb(10, 10, 20);
-            FOV_x = screen_width; 
-            FOV_y = screen_height;
-            cam = new Point3D(10, -190, 100);
             gr = CreateGraphics();
             m_walls = new List<Surface>();
             m_rays = new List<Ray3D>();
-
-            angle_x = (float)Math.PI * 0.75f;//right to left
+            cam = new Point3D(10, -190, 100);
+            angle_x = (float)Math.PI * 0.75f;//right to left where PI is collinear to OX
             angle_y = (float)Math.PI - 0.5f;//bottom to top
 
             int floor = -10;
@@ -64,13 +63,13 @@ namespace RTX3d_test
                 /* Параметры дальней стены */
                 {
                     Bitmap normal_map = new Bitmap("D:\\textures\\normalmap4.bmp");
-                    far_wall1.parameters.normal_map = normal_map;
+                    //far_wall1.parameters.normal_map = normal_map;
                     //far_wall2.parameters.normal_map = normal_map;
 
                     
-                    far_wall1.parameters.uv1 = new PointF(0, 0);
+                    /*far_wall1.parameters.uv1 = new PointF(0, 0);
                     far_wall1.parameters.uv2 = new PointF(far_wall1.parameters.normal_map.Width, 0);
-                    far_wall1.parameters.uv3 = new PointF(0, far_wall1.parameters.normal_map.Height);
+                    far_wall1.parameters.uv3 = new PointF(0, far_wall1.parameters.normal_map.Height);*/
 
                     /*far_wall2.parameters.uv1 = new PointF(0, far_wall2.parameters.normal_map.Height);
                     far_wall2.parameters.uv2 = new PointF(0, 0);
@@ -96,7 +95,7 @@ namespace RTX3d_test
                 Surface floor2 = new Surface(new Shape(new Point3D(0, 200, floor), new Point3D(0, -200, floor), new Point3D(201, -200, floor)), new SurfaceParam(Color.White, 0.1f, 300, 0.1f));
                 /* Параметры пола */
                 {
-                    Bitmap texture = new Bitmap("D:\\textures\\wooden_floor.bmp");
+                    Bitmap texture = new Bitmap("D:\\textures\\rainbow.jpg");
                     floor1.parameters.texture = texture;
                     floor2.parameters.texture = texture;
 
@@ -104,9 +103,9 @@ namespace RTX3d_test
                     floor1.parameters.uv2 = new PointF(floor1.parameters.texture.Width, 0);
                     floor1.parameters.uv3 = new PointF(0, floor1.parameters.texture.Height);
 
-                    floor2.parameters.uv1 = new PointF(0, floor1.parameters.texture.Height);
-                    floor2.parameters.uv2 = new PointF(0, 0);
-                    floor2.parameters.uv3 = new PointF(floor1.parameters.texture.Width, 0);
+                    floor2.parameters.uv1 = new PointF(floor1.parameters.texture.Width, 0);
+                    floor2.parameters.uv2 = new PointF(floor1.parameters.texture.Width, floor1.parameters.texture.Height);
+                    floor2.parameters.uv3 = new PointF(0, floor1.parameters.texture.Height);
 
                     m_walls.Add(floor1);
                     m_walls.Add(floor2);
@@ -124,7 +123,45 @@ namespace RTX3d_test
                 MakeCube(new Point3D(10, 30, 40), new Point3D(70, 20, floor), 0f, Color.DarkBlue);
                 //MakeCube(new Point3D(20, 40, 10), new Point3D(100, -100, 30), 0f, Color.DarkRed);
             }
+            if (m_enable_plane)
+            {
+                cam = new Point3D(-50, 100, 100);
+                angle_x = (float)Math.PI;
+                angle_y = (float)Math.PI - 0.5f;
+                m_light.power = 1000;
+                Surface floor1 = new Surface(new Shape(new Point3D(200, 200, floor), new Point3D(0, 200, floor), new Point3D(200, 0, floor)), new SurfaceParam(Color.FromArgb(0,0,100), 1, 1000, 0));
+                Surface floor2 = new Surface(new Shape(new Point3D(0, 200, floor), new Point3D(0, 0, floor), new Point3D(200, 0, floor)), new SurfaceParam(Color.FromArgb(100, 0, 0), 1, 1000, 0));
+                Bitmap test_normals = new Bitmap("D:\\textures\\normalmap2.bmp");
+                {
+                    floor1.parameters.normal_map = test_normals;
+                    floor1.parameters.uv1 = new PointF(floor1.parameters.normal_map.Width, 0); //10
+                    floor1.parameters.uv2 = new PointF(0, 0); //00
+                    floor1.parameters.uv3 = new PointF(0, floor1.parameters.normal_map.Height); //01
 
+                    floor2.parameters.normal_map = test_normals;
+                    floor2.parameters.uv1 = floor1.parameters.uv1;
+                    floor2.parameters.uv2 = floor1.parameters.uv3;
+                    floor2.parameters.uv3 = new PointF(floor1.parameters.normal_map.Height, floor1.parameters.normal_map.Height);
+                }
+                m_walls.Add(floor1);
+                m_walls.Add(floor2);
+
+                Surface top1 = new Surface(new Shape(new Point3D(250, 200, ceiling), new Point3D(450, 200, ceiling), new Point3D(450, 0, ceiling)), new SurfaceParam(Color.Red));
+                Surface top2 = new Surface(new Shape(new Point3D(250, 200, ceiling), new Point3D(450, 0, ceiling), new Point3D(250, 0, ceiling)), new SurfaceParam(Color.Red));
+                Bitmap texture = new Bitmap("D:\\textures\\checker.jpg");
+                top1.parameters.texture = texture;
+                top1.parameters.uv1 = new PointF(top1.parameters.texture.Width, 0); //10
+                top1.parameters.uv2 = new PointF(0, 0); //00
+                top1.parameters.uv3 = new PointF(0, top1.parameters.texture.Height); //01
+
+                top2.parameters.texture = texture;
+                top2.parameters.uv1 = top1.parameters.uv1;
+                top2.parameters.uv2 = top1.parameters.uv3;
+                top2.parameters.uv3 = new PointF(top1.parameters.texture.Height, top1.parameters.texture.Height);
+
+                m_walls.Add(top1);
+                m_walls.Add(top2);
+            }
             NewFrame();
         }
         public void NewFrame()
@@ -259,6 +296,7 @@ namespace RTX3d_test
             }
             public Vector CalculateNormalCoordinates(Ray3D hit_ray)
             {
+
                 Vector Z = shape.polygon.n;
                 Z.Normalize();
                 if (parameters.normal_map == null)
@@ -266,18 +304,22 @@ namespace RTX3d_test
 
                 Point UV = CalculateUVCoordinates(hit_ray, this, parameters.normal_map);
                 Color test_normal = parameters.normal_map.GetPixel(UV.X, UV.Y);
-
+                Point3D new_normal = new Point3D(
+                                                    test_normal.R - 128,
+                                                    test_normal.G - 128,
+                                                    test_normal.B - 128);
                 Vector X = new Vector(shape.polygon.vertex1, shape.polygon.vertex2);
                 X.Normalize();
                 Vector Y = new Vector(new Point3D(0, 0, 0), Vector.CrossProduct(Z, X));
                 Y.Normalize();
 
                 Vector tmp = new Vector(new Point3D(0, 0, 0), new Point3D(
-                                   (test_normal.R - 128) * X.relative_end.x + (test_normal.G - 128) * Y.relative_end.x + test_normal.B * Z.relative_end.x,
-                                   (test_normal.R - 128) * X.relative_end.y + (test_normal.G - 128) * Y.relative_end.y + test_normal.B * Z.relative_end.y,
-                                   (test_normal.R - 128) * X.relative_end.z + (test_normal.G - 128) * Y.relative_end.z + test_normal.B * Z.relative_end.z));
-                tmp.Normalize(); // tmp is a normal, not a reflected ray
+                new_normal.x * X.relative_end.x + new_normal.y * Y.relative_end.x + new_normal.z * Z.relative_end.x,
+                new_normal.x * X.relative_end.y + new_normal.y * Y.relative_end.y + new_normal.z * Z.relative_end.y,
+                new_normal.x * X.relative_end.z + new_normal.y * Y.relative_end.z + new_normal.z * Z.relative_end.z));
+                tmp.Normalize();
                 return tmp;
+
             }
         }
         public class SurfaceParam
@@ -302,15 +344,15 @@ namespace RTX3d_test
         public class Shape
         {
             public Polygon polygon;
-         // public Sphere sphere;
+            public Sphere sphere;
             public Shape(Point3D vertex1, Point3D vertex2, Point3D vertex3)
             {
                 polygon = new Polygon(vertex1, vertex2, vertex3);
             }
-         /*   public Shape(Point3D center, float radius)
+            public Shape(Point3D center, float radius)
             {
                 sphere = new Sphere(center,radius);
-            } */
+            } 
         }
         public class Lightray : Vector
         {
