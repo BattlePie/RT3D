@@ -47,7 +47,7 @@ namespace Simple3D
             Point3D res = new Point3D(x, y, z);
             return res;
         }
-        public static float ScolarMult(Vector A, Vector B)
+        public float ScolarMult(Vector A, Vector B)
         {
             return A.relative_end.x * B.relative_end.x + A.relative_end.y * B.relative_end.y + A.relative_end.z * B.relative_end.z;
         }
@@ -132,7 +132,7 @@ namespace Simple3D
             A = v1.relative_end.y * v2.relative_end.z - v1.relative_end.z * v2.relative_end.y;
             B = v1.relative_end.z * v2.relative_end.x - v1.relative_end.x * v2.relative_end.z;
             C = v1.relative_end.x * v2.relative_end.y - v1.relative_end.y * v2.relative_end.x;
-            D = (-vertex1.x * A) + (-vertex1.y * B) + (-vertex1.z * C);
+            D = -vertex1.x * A - vertex1.y * B - vertex1.z * C;
             n = new Vector(new Point3D(0, 0, 0), new Point3D(A, B, C));
             n.Normalize();
             
@@ -143,7 +143,7 @@ namespace Simple3D
         }
         public override float FindT(Vector input)
         {
-            float div = A * input.start.x + B * input.start.y + C * input.start.z - A * input.end.x - B * input.end.y - C * input.end.z;
+            float div = A * (input.start.x - input.end.x) + B * (input.start.y - input.end.y) + C * (input.start.z - input.end.z);
             float t;
             if (div != 0)
                 t = (A * input.start.x + B * input.start.y + C * input.start.z + D) / div;
@@ -260,6 +260,16 @@ namespace Simple3D
         public override Vector CalculateNormalMappedCoordinates(Point3D hit_point, Bitmap normal_map, PointF corner1, PointF corner2, PointF corner3)
         {
             throw new NotImplementedException();
+        }
+    }
+    public class Cylinder : Shape
+    {
+        public Point3D center;
+        public int radius;
+        public Cylinder(Point3D center, int radius)
+        {
+            this.center = center;
+            this.radius = radius;
         }
     }
 }
