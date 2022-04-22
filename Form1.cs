@@ -26,10 +26,10 @@ namespace RTX3d_test
         Omnilight m_light;
         static Color ambient_color;
 
-        bool m_enable_room = true;
-        bool m_enable_boxes = true;
-        bool m_enable_checker_floor = false;
-        bool m_enable_sphere = false;
+        bool m_enable_room = false;
+        bool m_enable_boxes = false;
+        bool m_enable_checker_floor = true;
+        bool m_enable_sphere = true;
         bool m_enable_lens = false;
 
         public Form1()
@@ -39,13 +39,13 @@ namespace RTX3d_test
             screen_height = ClientRectangle.Height;
             bounces = 3;
             n_frames = 1;
-            super_sampling = 2;
+            super_sampling = 1;
             n_rays_x = screen_width * super_sampling;
             n_rays_y = screen_height * super_sampling;
             ambient_color = Color.FromArgb(10, 10, 20);
             m_walls = new List<Surface>();
             m_rays = new List<Ray3D>();
-            cam = new Camera(new Point3D(0, 0, 0), new PointF(0, 0));
+            cam = new Camera(new Point3D(0, 0, 0), new PointF(0, 0), 2);
             //right to left
             //bottom to top
             int floor = -10;
@@ -129,12 +129,12 @@ namespace RTX3d_test
             }
             if (m_enable_checker_floor)
             {
-                cam.position.x = -150;
+                cam.position.x = -90;
                 cam.position.y = 100;
-                cam.position.z = 150;
+                cam.position.z = 100;
                 cam.direction = new PointF(0, -0.5f);
-                FOV_X = 0.5f;
-                FOV_Y = 0.5f;
+                FOV_X = 1f;
+                FOV_Y = 1f;
 
                 m_light = new Omnilight(new Point3D(0, 0, ceiling / 2), 700, Color.White, 200);
                 Surface floor1 = new Surface(new Polygon(new Point3D(200, 200, floor), new Point3D(0, 200, floor), new Point3D(200, 0, floor)), new Material(Color.FromArgb(0,0,100), 0, 1000, 0));
@@ -156,7 +156,6 @@ namespace RTX3d_test
             }
             if (m_enable_sphere)
             {
-                //cam.position = new Point3D()
                 m_walls.Add(new Surface(new Sphere(new Point3D(100, 140, floor + 30), 20), new Material(Color.Yellow, 1f, 300, 0)));
                 m_walls.Add(new Surface(new Sphere(new Point3D(120, 60, floor + 30), 30), new Material(Color.Red, 1f, 300, 1)));
             }
@@ -181,7 +180,6 @@ namespace RTX3d_test
         public void NewFrame()
         {
             SetRays();
-            FillT();
         }
         public Bitmap FillFrame()
         {
@@ -238,33 +236,14 @@ namespace RTX3d_test
         }
         public class Camera
         {
+            public short type;
             public PointF direction;
             public Point3D position;
-            public Camera(Point3D position, PointF direction) 
+            public Camera(Point3D position, PointF direction, short type = 1) 
             {
                 this.position = position;
                 this.direction = direction;
-            }
-            public void Gimball(float angle, Point3D pivot, float distance) // rotation doesn't work
-            {
-                position.x = distance * (float)Math.Cos(angle) + pivot.x;
-                position.y = distance * (float)Math.Sin(angle) + pivot.y;
-
-                Vector cam_to_pivot = new Vector(pivot, position);
-                
-                //this part is wrong
-                float angle_x = (float)Math.Acos(cam_to_pivot.relative_end.y / cam_to_pivot.Length());
-                float angle_y = (float)Math.Acos(cam_to_pivot.relative_end.z / cam_to_pivot.Length());
-
-                if (cam_to_pivot.relative_end.x <= pivot.x)
-                { direction.X = angle_x; }
-                else
-                { direction.X = 2 * (float)Math.PI - angle_x; }
-
-                if (cam_to_pivot.relative_end.z <= pivot.z)
-                { direction.Y = 2 * (float)Math.PI - angle_y; }
-                else
-                { direction.Y = angle_y; }
+                this.type = type;
             }
         }
         public class Ray3D: Vector
@@ -407,40 +386,44 @@ namespace RTX3d_test
             {
                 for (int i = 0; i < n_rays_x; i++)
                 {
-                    {/*
-                        float v_x = (2.0f * i / n_rays_x - 1) * FOV_X;
-                        float v_y = (2.0f * j / n_rays_y - 1) * FOV_Y;
-                        Ray3D r = new Ray3D(cam.position,
-                            new Point3D(cam.position.x + ((float)(Math.Sin(cam.direction.X) * Math.Tan(v_x) + Math.Cos(cam.direction.X))),
-                                        cam.position.y + ((float)(Math.Sin(cam.direction.X) - Math.Cos(cam.direction.X) * Math.Tan(v_x))),
-                                        cam.position.z + ((float)(Math.Sin(cam.direction.Y) - Math.Cos(cam.direction.Y) * Math.Tan(v_y)))));*/
-                        float v_x = 2.0f * i / n_rays_x - 1;
-                        float v_y = 2.0f * j / n_rays_y - 1;
-                        Ray3D r = new Ray3D(cam.position,
-                            new Point3D(cam.position.x + (float)(FOV_X * Math.Cos(cam.direction.X) + v_x * Math.Sin(cam.direction.X)),
-                                        cam.position.y + (float)(FOV_X * Math.Sin(cam.direction.X) - v_x * Math.Cos(cam.direction.X)),
-                                        cam.position.z + (float)(FOV_Y * Math.Sin(cam.direction.Y) - v_y * Math.Cos(cam.direction.Y))));
-                        m_rays.Add(r);
-                    }
-                }
-            }
-        }
-        public void FillT()
-        {
-            foreach (Ray3D r in m_rays)
-            {
-                TestRay(r);
-                if(r.hit_surface != null)
-                {
-                    Ray3D rr = r;
-                    for (int i = 0; i < bounces && rr.hit_surface != null; i++)
+                    Ray3D r = null;
+                    switch (cam.type)
                     {
-                        rr.CalcReflection();
-                        TestRay(rr.reflected_ray, rr.hit_surface);
-                        rr = rr.reflected_ray;
+                        case 1: //constant angle of rays
+                            {
+                                float v_x = (2.0f * i / n_rays_x - 1) * FOV_X;
+                                float v_y = (2.0f * j / n_rays_y - 1) * FOV_Y;
+                                r = new Ray3D(cam.position,
+                                    new Point3D(cam.position.x + ((float)(Math.Sin(cam.direction.X) * Math.Tan(v_x) + Math.Cos(cam.direction.X))),
+                                                cam.position.y + ((float)(Math.Sin(cam.direction.X) - Math.Cos(cam.direction.X) * Math.Tan(v_x))),
+                                                cam.position.z + ((float)(Math.Sin(cam.direction.Y) - Math.Cos(cam.direction.Y) * Math.Tan(v_y)))));
+                                break;
+                            }
+                        case 2: // constant space on screen
+                            {
+                                float v_x = 2.0f * i / n_rays_x - 1;
+                                float v_y = 2.0f * j / n_rays_y - 1;
+                                r = new Ray3D(cam.position,
+                                    new Point3D(cam.position.x + (float)(FOV_X * Math.Cos(cam.direction.X) + v_x * Math.Sin(cam.direction.X)),
+                                                cam.position.y + (float)(FOV_X * Math.Sin(cam.direction.X) - v_x * Math.Cos(cam.direction.X)),
+                                                cam.position.z + (float)(FOV_Y * Math.Sin(cam.direction.Y) - v_y * Math.Cos(cam.direction.Y))));
+                                break;
+                            }
                     }
+                    //previously FillT
+                    TestRay(r);
+                    if (r.hit_surface != null)
+                    {
+                        Ray3D rr = r;
+                        for (int v = 0; v < bounces && rr.hit_surface != null; v++)
+                        {
+                            rr.CalcReflection();
+                            TestRay(rr.reflected_ray, rr.hit_surface);
+                            rr = rr.reflected_ray;
+                        }
+                    }
+                    m_rays.Add(r);
                 }
-                
             }
         }
         private void TestRay(Ray3D r, Surface ignore_wall = null)
