@@ -39,7 +39,7 @@ namespace RTX3d_test
             screen_height = ClientRectangle.Height;
             bounces = 3;
             n_frames = 1;
-            super_sampling = 1;
+            super_sampling = 2;
             n_rays_x = screen_width * super_sampling;
             n_rays_y = screen_height * super_sampling;
             ambient_color = Color.FromArgb(10, 10, 20);
@@ -169,70 +169,15 @@ namespace RTX3d_test
                 m_walls.Add(lens2);
             }
 
+            Animate();
+        }
+        public void Animate()
+        {
             for (int i = 0; i < n_frames; i++)
             {
                 m_rays.Clear();
-                NewFrame();
-                Bitmap frame = FillFrame();
-                frame.Save("D://RT_images/res" + i + ".bmp");
+                GetImage().Save("D://RT_images/res" + i + ".bmp");
             }
-        }
-        public void NewFrame()
-        {
-            SetRays();
-        }
-        public Bitmap FillFrame()
-        {
-            Bitmap res = new Bitmap(screen_width, screen_height);
-            if (super_sampling == 1)
-            {
-                for (int i = 0; i < screen_width; i++)
-                {
-                    for (int j = 0; j < screen_height; j++)
-                    {
-                        res.SetPixel(i, j, m_rays[j * screen_width + i].CalculateColor());
-                    }
-                }
-            }
-            else
-            {
-                for (int i = 0; i < n_rays_x; i++)
-                {
-                    for (int j = 0; j < n_rays_y; j++)
-                    {
-                        int res_r = 0;
-                        int res_g = 0;
-                        int res_b = 0;
-                        int amount = 0;
-                        if (i % super_sampling == 0 && j % super_sampling == 0)
-                        {
-                            List<Ray3D> rays = new List<Ray3D>();
-
-                            Color c;
-
-                            for (int m = 0; m < super_sampling; m++)
-                            {
-                                for (int n = 0; n < super_sampling; n++)
-                                {
-                                    rays.Add(m_rays[(j + m) * n_rays_x + i + n]);
-                                }
-                            }
-                            foreach (Ray3D ray in rays)
-                            {
-                                c = ray.CalculateColor();
-                                res_r += c.R;
-                                res_g += c.G;
-                                res_b += c.B;
-                                amount++;
-                            }
-                            rays.Clear();
-                            res.SetPixel(i / super_sampling, j / super_sampling, Color.FromArgb(res_r / amount, res_g / amount, res_b / amount));
-                        }
-
-                    }
-                }
-            }
-            return res;
         }
         public class Camera
         {
@@ -380,8 +325,9 @@ namespace RTX3d_test
         {
         
         }
-        public void SetRays()
+        public Bitmap GetImage()
         {
+            Bitmap res = new Bitmap(screen_width, screen_height);
             for (int j = 0; j < n_rays_y; j++)
             {
                 for (int i = 0; i < n_rays_x; i++)
@@ -411,20 +357,60 @@ namespace RTX3d_test
                             }
                     }
                     //previously FillT
-                    TestRay(r);
-                    if (r.hit_surface != null)
                     {
-                        Ray3D rr = r;
-                        for (int v = 0; v < bounces && rr.hit_surface != null; v++)
+                        TestRay(r);
+                        if (r.hit_surface != null)
                         {
-                            rr.CalcReflection();
-                            TestRay(rr.reflected_ray, rr.hit_surface);
-                            rr = rr.reflected_ray;
+                            Ray3D rr = r;
+                            for (int v = 0; v < bounces && rr.hit_surface != null; v++)
+                            {
+                                rr.CalcReflection();
+                                TestRay(rr.reflected_ray, rr.hit_surface);
+                                rr = rr.reflected_ray;
+                            }
+                        }
+                        m_rays.Add(r);
+                    }
+                    //Super sampling
+                    {
+                        if (super_sampling == 1)
+                        {
+                            res.SetPixel(i, j, r.CalculateColor());
+                        }
+                        else
+                        {
+                            int res_r = 0;
+                            int res_g = 0;
+                            int res_b = 0;
+                            int amount = 0;
+                            if (i % super_sampling == 0 && j % super_sampling == 0 && i != 0 && j != 0)
+                            {
+                                Ray3D[,] rays = new Ray3D[super_sampling, super_sampling];
+
+                                Color c;
+
+                                for (int m = 0; m < super_sampling; m++)
+                                {
+                                    for (int n = 0; n < super_sampling; n++)
+                                    {
+                                        rays[n, m] = m_rays[(j - m) * n_rays_x + i - n];
+                                    }
+                                }
+                                foreach (Ray3D ray in rays)
+                                {
+                                    c = ray.CalculateColor();
+                                    res_r += c.R;
+                                    res_g += c.G;
+                                    res_b += c.B;
+                                    amount++;
+                                }
+                                res.SetPixel(i / super_sampling, j / super_sampling, Color.FromArgb(res_r / amount, res_g / amount, res_b / amount));
+                            }
                         }
                     }
-                    m_rays.Add(r);
                 }
             }
+            return res;
         }
         private void TestRay(Ray3D r, Surface ignore_wall = null)
         {
@@ -481,7 +467,7 @@ namespace RTX3d_test
         }
         private void Form1_Paint(object sender, PaintEventArgs e)
         {
-            e.Graphics.DrawImage(FillFrame(),0,0);
+            e.Graphics.DrawImage(GetImage(),0,0);
         }
         public void MakeCube(Point3D size, Point3D offset, float reflectivity, Color color)
         {
