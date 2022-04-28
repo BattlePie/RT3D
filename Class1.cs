@@ -17,7 +17,6 @@ namespace Simple3D
     }
     public class Vector
     {
-
         public Point3D start;
         public Point3D end;
         public Point3D relative_end;
@@ -47,23 +46,13 @@ namespace Simple3D
             Point3D res = new Point3D(x, y, z);
             return res;
         }
-        public float ScolarMult(Vector A, Vector B)
+        public float ScalarMult(Vector A, Vector B)
         {
             return A.relative_end.x * B.relative_end.x + A.relative_end.y * B.relative_end.y + A.relative_end.z * B.relative_end.z;
         }
-        public static float ScolarMult(Point3D A, Point3D B)
+        public static float ScalarMult(Point3D A, Point3D B)
         {
             return A.x * B.x + A.y * B.y + A.z * B.z;
-        }
-        public static Vector Summ(List<Vector> vectors)
-        {
-            Vector res = new Vector(vectors[0].start, vectors[vectors.Capacity].end);
-            return res;
-        }
-        public static Vector Summ(int n_vectors, Vector[] vectors)
-        {
-            Vector res = new Vector(vectors[0].start, vectors[n_vectors].end);
-            return res;
         }
         public void Normalize()
         {
@@ -72,14 +61,30 @@ namespace Simple3D
             relative_end.y /= len;
             relative_end.z /= len;
         }
-        public Vector Normalize(Vector A)
+        public Vector Normalize(Vector a)
         {
-            float len = A.Length();
-            return new Vector(new Point3D(0, 0, 0), 
-                new Point3D(relative_end.x /= len,
-                            relative_end.y /= len,
-                            relative_end.z /= len));
+            float len = a.Length();
+            a.relative_end.x /= len;
+            a.relative_end.y /= len;
+            a.relative_end.z /= len;
+            return a;
         }
+        public float Angle(Vector A, Vector B)
+        {
+            return 1f / ((float)Math.Acos(ScalarMult(A, B) / (A.Length() * B.Length())));
+        }
+        public Vector Reflect(Vector n)
+        {
+            float sm = ScalarMult(this, n);
+            Point3D denum = new Point3D(n.relative_end.x * 2 * sm, n.relative_end.y * 2 * sm, n.relative_end.z * 2 * sm);
+            return new Vector(end,
+            new Point3D(relative_end.x - denum.x + end.x,
+            relative_end.y - denum.y + end.y,
+            relative_end.z - denum.z + end.z));
+
+        }
+        public static Vector operator -(Vector A)
+        => new Vector(A.end, A.start);
     }
     public class Shape
     {
@@ -165,11 +170,10 @@ namespace Simple3D
             Point3D Vmult1 = Vector.CrossProduct(cl1, wall1);
             Point3D Vmult2 = Vector.CrossProduct(cl2, wall2);
             Point3D Vmult3 = Vector.CrossProduct(cl3, wall3);
-            float s1 = Vector.ScolarMult(Vmult1, Vmult2);
-            float s2 = Vector.ScolarMult(Vmult2, Vmult3);
-            float s3 = Vector.ScolarMult(Vmult3, Vmult1);
+            float s1 = Vector.ScalarMult(Vmult1, Vmult2);
+            float s2 = Vector.ScalarMult(Vmult2, Vmult3);
 
-            return s1 >= 0 && s2 >= 0 && s3 >= 0;
+            return s1 >= 0 && s2 >= 0;
         }
         public override Point CalculateUVcoordinates(Point3D hit_point, Bitmap texture, PointF corner1, PointF corner2, PointF corner3)
         {
